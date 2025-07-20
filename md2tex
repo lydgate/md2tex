@@ -91,8 +91,14 @@ def process_markdown_line(line):
     line = re.sub(r'__([^_]+)__', r'\\textbf{\1}', line)
     line = re.sub(r'_([^_]+)_', r'\\textit{\1}', line)
     
-    # Links
-    line = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'\\href{\2}{\1}', line)
+    # Links - handle URLs with special characters
+    def process_link(match):
+        text = match.group(1)
+        url = match.group(2)
+        # Use \url{} for URLs to handle special characters properly
+        return f'\\url{{{url}}}'
+    
+    line = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', process_link, line)
     
     # Escape remaining text and return as paragraph
     return escape_latex(line) + "\n"
@@ -252,6 +258,7 @@ def create_latex_document(md_files, output_file):
 \fancyhead[LE,RO]{\thepage}
 \fancyhead[LO,RE]{\nouppercase{\leftmark}}
 \renewcommand{\headrulewidth}{0.4pt}
+\setlength{\headheight}{14pt}
 
 % Code highlighting
 \usepackage{listings}
@@ -359,14 +366,17 @@ def compile_pdf(tex_file):
     """Compile the LaTeX file to PDF using XeLaTeX (required for fontspec)"""
     print("Compiling PDF with XeLaTeX...")
     
+    # Get the directory and filename
+    tex_dir = os.path.dirname(tex_file) or '.'
+    tex_name = os.path.basename(tex_file)
+    
     # Run XeLaTeX twice for proper cross-references
     for i in range(2):
         result = subprocess.run([
             'xelatex', 
             '-interaction=nonstopmode',
-            '-output-directory=' + os.path.dirname(tex_file) or '.',
-            tex_file
-        ], capture_output=True, text=True)
+            tex_name
+        ], capture_output=True, text=True, cwd=tex_dir)
         
         if result.returncode != 0:
             print(f"XeLaTeX compilation failed on pass {i+1}:")
