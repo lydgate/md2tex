@@ -34,7 +34,7 @@ def escape_latex(text):
     
     return text
 
-def process_markdown_line(line):
+def process_markdown_line(line, use_sections=False):
     """Convert a single line of Markdown to LaTeX"""
     line = line.rstrip()
     
@@ -45,19 +45,22 @@ def process_markdown_line(line):
     # Headers
     if line.startswith('# '):
         title = escape_latex(line[2:].strip())
-        return f"\\chapter{{{title}}}\n"
+        if use_sections:
+            return f"\\section{{{title}}}\n"
+        else:
+            return f"\\chapter{{{title}}}\n"
     elif line.startswith('## '):
         title = escape_latex(line[3:].strip())
-        return f"\\section{{{title}}}\n"
+        return f"\\subsection{{{title}}}\n"
     elif line.startswith('### '):
         title = escape_latex(line[4:].strip())
-        return f"\\subsection{{{title}}}\n"
+        return f"\\subsubsection{{{title}}}\n"
     elif line.startswith('#### '):
         title = escape_latex(line[5:].strip())
-        return f"\\subsubsection{{{title}}}\n"
+        return f"\\paragraph{{{title}}}\n"
     elif line.startswith('##### '):
         title = escape_latex(line[6:].strip())
-        return f"\\paragraph{{{title}}}\n"
+        return f"\\subparagraph{{{title}}}\n"
     elif line.startswith('###### '):
         title = escape_latex(line[7:].strip())
         return f"\\subparagraph{{{title}}}\n"
@@ -103,7 +106,7 @@ def process_markdown_line(line):
     # Escape remaining text and return as paragraph
     return escape_latex(line) + "\n"
 
-def convert_markdown_file(md_file_path):
+def convert_markdown_file(md_file_path, use_sections=False):
     """Convert a single Markdown file to LaTeX content"""
     with open(md_file_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
@@ -159,7 +162,7 @@ def convert_markdown_file(md_file_path):
                 latex_content.append("\\end{enumerate}\n\n")
                 in_ordered_list = False
             
-            latex_content.append(process_markdown_line(line))
+            latex_content.append(process_markdown_line(line, use_sections))
             continue
         
         # Handle lists
@@ -175,7 +178,7 @@ def convert_markdown_file(md_file_path):
                 latex_content.append("\\begin{itemize}\n")
                 in_list = True
             
-            latex_content.append(process_markdown_line(line) + "\n")
+            latex_content.append(process_markdown_line(line, use_sections) + "\n")
             continue
         
         elif re.match(r'^\s*\d+\.\s+', line):
@@ -190,7 +193,7 @@ def convert_markdown_file(md_file_path):
                 latex_content.append("\\begin{enumerate}\n")
                 in_ordered_list = True
             
-            latex_content.append(process_markdown_line(line) + "\n")
+            latex_content.append(process_markdown_line(line, use_sections) + "\n")
             continue
         
         # Close lists if we're not in a list item
@@ -202,7 +205,7 @@ def convert_markdown_file(md_file_path):
             in_ordered_list = False
         
         # Regular paragraph content
-        processed_line = process_markdown_line(line).strip()
+        processed_line = process_markdown_line(line, use_sections).strip()
         if processed_line:
             paragraph_buffer.append(processed_line)
     
@@ -217,7 +220,7 @@ def convert_markdown_file(md_file_path):
     
     return ''.join(latex_content)
 
-def create_latex_document(md_files, output_file):
+def create_latex_document(md_files, output_file, use_sections=False):
     """Create the complete LaTeX document"""
     
     # LaTeX preamble with optimized two-column layout
@@ -351,7 +354,7 @@ def create_latex_document(md_files, output_file):
     
     for md_file in sorted(md_files):
         print(f"Processing {md_file}...")
-        file_content = convert_markdown_file(md_file)
+        file_content = convert_markdown_file(md_file, use_sections)
         full_content += file_content + "\n\n"
     
     full_content += ending
@@ -422,6 +425,11 @@ def main():
         default='Subtitle or Description',
         help='Subtitle for the title page'
     )
+    parser.add_argument(
+        '--sections',
+        action='store_true',
+        help='Use sections instead of chapters for # headers (better for shorter documents)'
+    )
     
     args = parser.parse_args()
     
@@ -440,7 +448,7 @@ def main():
         print(f"  - {f}")
     
     # Create the LaTeX document
-    create_latex_document(md_files, args.output)
+    create_latex_document(md_files, args.output, args.sections)
     
     # Optionally compile to PDF
     if not args.no_compile:
