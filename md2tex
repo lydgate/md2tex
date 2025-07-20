@@ -106,10 +106,43 @@ def process_markdown_line(line, use_sections=False):
     # Escape remaining text and return as paragraph
     return escape_latex(line) + "\n"
 
+def extract_yaml_front_matter(lines):
+    """Extract YAML front matter from the beginning of a markdown file"""
+    if not lines or not lines[0].strip().startswith('---'):
+        return {}, lines
+    
+    # Find the end of YAML front matter
+    end_index = -1
+    for i, line in enumerate(lines[1:], 1):
+        if line.strip() == '---':
+            end_index = i
+            break
+    
+    if end_index == -1:
+        return {}, lines
+    
+    # Extract YAML content
+    yaml_lines = lines[1:end_index]
+    yaml_content = {}
+    
+    for line in yaml_lines:
+        line = line.strip()
+        if ':' in line:
+            key, value = line.split(':', 1)
+            key = key.strip()
+            value = value.strip().strip('"\'')  # Remove quotes
+            yaml_content[key] = value
+    
+    # Return remaining lines (after the closing ---)
+    return yaml_content, lines[end_index + 1:]
+
 def convert_markdown_file(md_file_path, use_sections=False):
     """Convert a single Markdown file to LaTeX content"""
     with open(md_file_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
+    
+    # Extract YAML front matter
+    yaml_metadata, content_lines = extract_yaml_front_matter(lines)
     
     latex_content = []
     in_list = False
@@ -117,7 +150,7 @@ def convert_markdown_file(md_file_path, use_sections=False):
     in_code_block = False
     paragraph_buffer = []
     
-    for line in lines:
+    for line in content_lines:
         line = line.rstrip()
         
         # Handle code blocks
@@ -220,20 +253,20 @@ def convert_markdown_file(md_file_path, use_sections=False):
     
     return ''.join(latex_content)
 
-def create_latex_document(md_files, output_file, use_sections=False):
+def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description"):
     """Create the complete LaTeX document"""
     
     # LaTeX preamble with optimized two-column layout
-    preamble = r'''\documentclass[11pt,a4paper,twoside]{book}
+    preamble = f'''\\documentclass[11pt,a4paper,twoside]{{book}}
 
 % Font setup - Minion Pro
-\usepackage{fontspec}
-\setmainfont{Minion Pro}
-\setsansfont{Myriad Pro}
-\setmonofont{Source Code Pro}
+\\usepackage{{fontspec}}
+\\setmainfont{{Minion Pro}}
+\\setsansfont{{Myriad Pro}}
+\\setmonofont{{Source Code Pro}}
 
 % Page layout optimized for A4 two-column readability
-\usepackage[
+\\usepackage[
     a4paper,
     inner=25mm,    % Inner margin for binding
     outer=20mm,    % Outer margin for notes/cutting
@@ -241,105 +274,105 @@ def create_latex_document(md_files, output_file, use_sections=False):
     bottom=30mm,   % Bottom margin
     columnsep=6mm, % Space between columns
     marginparwidth=15mm % Margin notes width
-]{geometry}
+]{{geometry}}
 
 % Two-column layout
-\usepackage{multicol}
+\\usepackage{{multicol}}
 
 % Enhanced typography
-\usepackage{microtype}  % Better letter spacing and word breaking
-\usepackage{setspace}   % Line spacing control
+\\usepackage{{microtype}}  % Better letter spacing and word breaking
+\\usepackage{{setspace}}   % Line spacing control
 
 % Paragraph formatting with spacing
-\setlength{\parindent}{0pt}
-\setlength{\parskip}{6pt plus 2pt minus 1pt}
+\\setlength{{\\parindent}}{{0pt}}
+\\setlength{{\\parskip}}{{6pt plus 2pt minus 1pt}}
 
 % Headers and page numbers
-\usepackage{fancyhdr}
-\pagestyle{fancy}
-\fancyhf{}
-\fancyhead[LE,RO]{\thepage}
-\fancyhead[LO,RE]{\nouppercase{\leftmark}}
-\renewcommand{\headrulewidth}{0.4pt}
-\setlength{\headheight}{14pt}
+\\usepackage{{fancyhdr}}
+\\pagestyle{{fancy}}
+\\fancyhf{{}}
+\\fancyhead[LE,RO]{{\\thepage}}
+\\fancyhead[LO,RE]{{\\nouppercase{{\\leftmark}}}}
+\\renewcommand{{\\headrulewidth}}{{0.4pt}}
+\\setlength{{\\headheight}}{{14pt}}
 
 % Code highlighting
-\usepackage{listings}
-\usepackage{xcolor}
+\\usepackage{{listings}}
+\\usepackage{{xcolor}}
 
-\lstset{
-    basicstyle=\ttfamily\small,
+\\lstset{{
+    basicstyle=\\ttfamily\\small,
     breaklines=true,
     frame=single,
-    backgroundcolor=\color{gray!10},
-    commentstyle=\color{gray},
-    keywordstyle=\color{blue},
-    stringstyle=\color{red},
+    backgroundcolor=\\color{{gray!10}},
+    commentstyle=\\color{{gray}},
+    keywordstyle=\\color{{blue}},
+    stringstyle=\\color{{red}},
     numbers=left,
-    numberstyle=\tiny\color{gray},
+    numberstyle=\\tiny\\color{{gray}},
     stepnumber=1,
     tabsize=2
-}
+}}
 
 % Links and references
-\usepackage{hyperref}
-\hypersetup{
+\\usepackage{{hyperref}}
+\\hypersetup{{
     colorlinks=true,
     linkcolor=black,
     urlcolor=blue,
     citecolor=black,
-    pdfborder={0 0 0}
-}
+    pdfborder={{0 0 0}}
+}}
 
 % Better chapter formatting
-\usepackage{titlesec}
-\titleformat{\chapter}[display]
-{\normalfont\huge\bfseries\raggedright}
-{\chaptertitlename\ \thechapter}{20pt}{\Huge}
-\titlespacing*{\chapter}{0pt}{0pt}{40pt}
+\\usepackage{{titlesec}}
+\\titleformat{{\\chapter}}[display]
+{{\\normalfont\\huge\\bfseries\\raggedright}}
+{{\\chaptertitlename\\ \\thechapter}}{{20pt}}{{\\Huge}}
+\\titlespacing*{{\\chapter}}{{0pt}}{{0pt}}{{40pt}}
 
 % Table support
-\usepackage{booktabs}
-\usepackage{longtable}
-\usepackage{array}
+\\usepackage{{booktabs}}
+\\usepackage{{longtable}}
+\\usepackage{{array}}
 
 % Graphics support
-\usepackage{graphicx}
+\\usepackage{{graphicx}}
 
 % Better list formatting
-\usepackage{enumitem}
-\setlist[itemize]{leftmargin=*,topsep=3pt,itemsep=1pt}
-\setlist[enumerate]{leftmargin=*,topsep=3pt,itemsep=1pt}
+\\usepackage{{enumitem}}
+\\setlist[itemize]{{leftmargin=*,topsep=3pt,itemsep=1pt}}
+\\setlist[enumerate]{{leftmargin=*,topsep=3pt,itemsep=1pt}}
 
-\begin{document}
+\\begin{{document}}
 
 % Title page
-\begin{titlepage}
-\centering
-\vspace*{2cm}
+\\begin{{titlepage}}
+\\centering
+\\vspace*{{2cm}}
 
-{\Huge\bfseries Your Book Title}
+{{\\Huge\\bfseries {title}}}
 
-\vspace{1cm}
+\\vspace{{1cm}}
 
-{\Large Subtitle or Description}
+{{\\Large {subtitle}}}
 
-\vspace{2cm}
+\\vspace{{2cm}}
 
-{\large Author Name}
+{{\\large {author}}}
 
-\vfill
+\\vfill
 
-{\large\today}
+{{\\large\\today}}
 
-\end{titlepage}
+\\end{{titlepage}}
 
 % Table of contents
-\tableofcontents
-\newpage
+\\tableofcontents
+\\newpage
 
 % Start two-column layout for main content
-\begin{multicols}{2}
+\\begin{{multicols}}{{2}}
 
 '''
 
@@ -447,8 +480,21 @@ def main():
     for f in sorted(md_files):
         print(f"  - {f}")
     
+    # Collect metadata from all files
+    all_metadata = {}
+    for md_file in md_files:
+        with open(md_file, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        metadata, _ = extract_yaml_front_matter(lines)
+        all_metadata.update(metadata)
+    
+    # Use command-line args as defaults, but override with YAML metadata if present
+    title = all_metadata.get('title', args.title)
+    author = all_metadata.get('author', args.author)
+    subtitle = all_metadata.get('subtitle', args.subtitle)
+    
     # Create the LaTeX document
-    create_latex_document(md_files, args.output, args.sections)
+    create_latex_document(md_files, args.output, args.sections, title, author, subtitle)
     
     # Optionally compile to PDF
     if not args.no_compile:
