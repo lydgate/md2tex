@@ -101,6 +101,12 @@ def process_markdown_line(line, use_sections=False):
     
     line = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', process_link, line)
     
+    # Handle quotes - convert to LaTeX quote conventions
+    # Single quotes: 'text' -> `text'
+    line = re.sub(r"'([^']*)'", r"`\1'", line)
+    # Double quotes: "text" -> ``text''
+    line = re.sub(r'"([^"]*)"', r"``\1''", line)
+    
     # Escape remaining text and return as paragraph
     return escape_latex(line) + "\n"
 
