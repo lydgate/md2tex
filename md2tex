@@ -14,7 +14,7 @@ from pathlib import Path
 import subprocess
 
 def escape_latex(text):
-    """Escape special LaTeX characters in text"""
+    """Escape special LaTeX characters in text, but preserve LaTeX commands"""
     # Dictionary of LaTeX special characters and their escaped versions
     latex_chars = {
         '&': r'\&',
@@ -26,9 +26,9 @@ def escape_latex(text):
         '{': r'\{',
         '}': r'\}',
         '~': r'\textasciitilde{}',
-        '\\': r'\textbackslash{}',
     }
     
+    # Escape special characters (but not backslashes)
     for char, escape in latex_chars.items():
         text = text.replace(char, escape)
     
