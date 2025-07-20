@@ -92,12 +92,12 @@ def process_markdown_line(line, use_sections=False):
     line = re.sub(r'__([^_]+)__', r'\\textbf{\1}', line)
     line = re.sub(r'_([^_]+)_', r'\\textit{\1}', line)
     
-    # Links - handle URLs with special characters
+    # Links - show text with hyperlink and footnote with URL for print
     def process_link(match):
         text = match.group(1)
         url = match.group(2)
-        # Use \url{} for URLs to handle special characters properly
-        return f'\\url{{{url}}}'
+        # Show the link text with hyperlink, and add footnote with URL
+        return f'\\href{{{url}}}{{{text}}}\\footnote{{\\url{{{url}}}}}'
     
     line = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', process_link, line)
     
@@ -267,16 +267,16 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\usepackage{{fontspec}}
 \\setmainfont{{Minion Pro}}
 \\setsansfont{{Myriad Pro}}
-\\setmonofont{{Source Code Pro}}
+\\setmonofont{{Consolas Ligaturized}}
 
-% Page layout optimized for A4 single-sided printing
+% Page layout optimized for A4 single-sided printing with balanced margins
 \\usepackage[
     a4paper,
     left=25mm,     % Left margin
     right=25mm,    % Right margin
     top=25mm,      % Top margin
-    bottom=30mm,   % Bottom margin
-    columnsep=6mm, % Space between columns
+    bottom=25mm,   % Bottom margin (now equal to top)
+    columnsep=12.5mm, % Space between columns (increased for better balance)
     marginparwidth=15mm % Margin notes width
 ]{{geometry}}
 
@@ -296,7 +296,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\pagestyle{{fancy}}
 \\fancyhf{{}}
 \\fancyhead[C]{{\\thepage}}
-\\fancyhead[L]{{\\nouppercase{{{title}}}}}
+\\fancyhead[L]{{\\nouppercase{{\\textit{{{title}}}}}}}
 \\fancyhead[R]{{\\nouppercase{{{subtitle}}}}}
 \\renewcommand{{\\headrulewidth}}{{0.4pt}}
 \\setlength{{\\headheight}}{{14pt}}
