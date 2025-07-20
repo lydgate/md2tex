@@ -257,7 +257,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     """Create the complete LaTeX document"""
     
     # LaTeX preamble with optimized two-column layout
-    preamble = f'''\\documentclass[11pt,a4paper,twoside]{{book}}
+    preamble = f'''\\documentclass[11pt,a4paper,oneside]{{book}}
 
 % Font setup - Minion Pro
 \\usepackage{{fontspec}}
@@ -265,11 +265,11 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\setsansfont{{Myriad Pro}}
 \\setmonofont{{Source Code Pro}}
 
-% Page layout optimized for A4 two-column readability
+% Page layout optimized for A4 single-sided printing
 \\usepackage[
     a4paper,
-    inner=25mm,    % Inner margin for binding
-    outer=20mm,    % Outer margin for notes/cutting
+    left=25mm,     % Left margin
+    right=25mm,    % Right margin
     top=25mm,      % Top margin
     bottom=30mm,   % Bottom margin
     columnsep=6mm, % Space between columns
@@ -291,8 +291,9 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\usepackage{{fancyhdr}}
 \\pagestyle{{fancy}}
 \\fancyhf{{}}
-\\fancyhead[LE,RO]{{\\thepage}}
-\\fancyhead[LO,RE]{{\\nouppercase{{\\leftmark}}}}
+\\fancyhead[C]{{\\thepage}}
+\\fancyhead[L]{{\\nouppercase{{{title}}}}}
+\\fancyhead[R]{{\\nouppercase{{{subtitle}}}}}
 \\renewcommand{{\\headrulewidth}}{{0.4pt}}
 \\setlength{{\\headheight}}{{14pt}}
 
