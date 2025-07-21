@@ -1,0 +1,59 @@
+# LaTeX compilation artifacts
+*.aux
+*.log
+*.out
+*.pdf
+*.toc
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.synctex(busy)
+*.pdfsync
+*.bbl
+*.bcf
+*.blg
+*.run.xml
+*.lof
+*.lot
+*.idx
+*.ind
+*.ilg
+*.glo
+*.gls
+*.glg
+*.acn
+*.acr
+*.alg
+*.glsdefs
+*.nav
+*.snm
+*.vrb
+
+# Generated LaTeX files from md2tex
+*.tex
+!md2tex
+
+# Font and compilation logs
+missfont.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
+*.sublime-*
+
+# Python cache (if applicable)
+__pycache__/
+*.py[cod]
+*$py.class 
