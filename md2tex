@@ -844,7 +844,7 @@ def main():
     parser.add_argument(
         '-o', '--output',
         default='book.tex',
-        help='Output LaTeX file name (default: book.tex)'
+        help='Output LaTeX file name (default: book.tex, or input filename for single files)'
     )
     parser.add_argument(
         '--no-compile',
@@ -898,6 +898,13 @@ def main():
     if not md_files:
         print("No Markdown files found!")
         sys.exit(1)
+    
+    # Set default output filename based on input if not explicitly provided
+    if args.output == 'book.tex' and len(md_files) == 1:
+        # Extract base name from single input file
+        input_path = Path(md_files[0])
+        base_name = input_path.stem  # filename without extension
+        args.output = f"{base_name}.tex"
     
     print(f"Found {len(md_files)} Markdown files:")
     for f in sorted(md_files):
