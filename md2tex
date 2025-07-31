@@ -13,6 +13,90 @@ import argparse
 from pathlib import Path
 import subprocess
 
+# =============================================================================
+# COMMON TEMPLATE PARTS - Extract the truly identical sections
+# =============================================================================
+
+FONT_SETUP = r"""% Font setup - Minion Pro
+\usepackage{fontspec}
+\setmainfont{Minion Pro}
+\setsansfont{Myriad Pro}
+\setmonofont{Consolas Ligaturized}"""
+
+TYPOGRAPHY_PACKAGES = r"""% Enhanced typography
+\usepackage{microtype}  % Better letter spacing and word breaking
+\usepackage{setspace}   % Line spacing control"""
+
+CODE_HIGHLIGHTING_BASE = r"""% Code highlighting
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10},
+    commentstyle=\color{gray},
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    tabsize=2"""
+
+# KDP has additional settings
+CODE_HIGHLIGHTING_KDP = CODE_HIGHLIGHTING_BASE + r""",
+    breakatwhitespace=true,
+    xleftmargin=5pt,
+    xrightmargin=5pt,
+    breakindent=0pt,
+    prebreak=\mbox{\textbackslash}
+}"""
+
+CODE_HIGHLIGHTING_STANDARD = CODE_HIGHLIGHTING_BASE + r"""
+}"""
+
+LINKS_REFERENCES_BASE = r"""% Links and references
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+    citecolor=black,
+    pdfborder={0 0 0}"""
+
+# KDP has additional URL breaking features
+LINKS_REFERENCES_KDP = LINKS_REFERENCES_BASE + r""",
+    breaklinks=true  % Allow URLs to break across lines
+}
+
+\usepackage{url}  % Better URL formatting and breaking
+
+% Configure URL line breaking
+\urlstyle{same}  % Use same font as text
+\def\UrlBreaks{\do\/\do\-\do\.\do\:\do\?\do\=\do\&}  % Allow breaks at these characters"""
+
+LINKS_REFERENCES_STANDARD = LINKS_REFERENCES_BASE + r"""
+}"""
+
+TABLE_AND_GRAPHICS = r"""% Table support
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+
+% Graphics support
+\usepackage{graphicx}"""
+
+LIST_FORMATTING = r"""% Better list formatting
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=*,topsep=3pt,itemsep=1pt}
+\setlist[enumerate]{leftmargin=*,topsep=3pt,itemsep=1pt}"""
+
+SECTION_NUMBERING = r"""% Custom section numbering for section mode
+\renewcommand{\thesection}{\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}"""
+
 def escape_latex(text):
     """Escape special LaTeX characters in text, but preserve LaTeX commands"""
     # Dictionary of LaTeX special characters and their escaped versions
@@ -301,17 +385,13 @@ def convert_markdown_file(md_file_path, use_sections=False):
     return ''.join(latex_content)
 
 def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp=False):
-    """Create the complete LaTeX document"""
+    """Create the complete LaTeX document using variable-based templates"""
     
     if kdp:
         # KDP 6x9 inch format (152.4 x 228.6mm) optimized for Amazon KDP
         preamble = f'''\\documentclass[12pt,twoside]{{book}}
 
-% Font setup - Minion Pro
-\\usepackage{{fontspec}}
-\\setmainfont{{Minion Pro}}
-\\setsansfont{{Myriad Pro}}
-\\setmonofont{{Consolas Ligaturized}}
+{FONT_SETUP}
 
 % Page layout for KDP 6x9 inch format (152.4 x 228.6mm)
 \\usepackage[
@@ -323,9 +403,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     bottom=19.1mm    % 0.75in bottom margin (well above 0.25in minimum)
 ]{{geometry}}
 
-% Enhanced typography
-\\usepackage{{microtype}}  % Better letter spacing and word breaking
-\\usepackage{{setspace}}   % Line spacing control
+{TYPOGRAPHY_PACKAGES}
 
 % Paragraph formatting optimized for readability and margin compliance
 \\setlength{{\\parindent}}{{12pt}}
@@ -343,44 +421,9 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\renewcommand{{\\headrulewidth}}{{0pt}}
 \\setlength{{\\headheight}}{{14pt}}
 
-% Code highlighting
-\\usepackage{{listings}}
-\\usepackage{{xcolor}}
+{CODE_HIGHLIGHTING_KDP}
 
-\\lstset{{
-    basicstyle=\\ttfamily\\small,
-    breaklines=true,
-    breakatwhitespace=true,
-    frame=single,
-    backgroundcolor=\\color{{gray!10}},
-    commentstyle=\\color{{gray}},
-    keywordstyle=\\color{{blue}},
-    stringstyle=\\color{{red}},
-    numbers=left,
-    numberstyle=\\tiny\\color{{gray}},
-    stepnumber=1,
-    tabsize=2,
-    xleftmargin=5pt,
-    xrightmargin=5pt,
-    breakindent=0pt,
-    prebreak=\\mbox{{\\textbackslash}}
-}}
-
-% Links and references
-\\usepackage{{hyperref}}
-\\usepackage{{url}}  % Better URL formatting and breaking
-\\hypersetup{{
-    colorlinks=true,
-    linkcolor=black,
-    urlcolor=blue,
-    citecolor=black,
-    pdfborder={{0 0 0}},
-    breaklinks=true  % Allow URLs to break across lines
-}}
-
-% Configure URL line breaking
-\\urlstyle{{same}}  % Use same font as text
-\\def\\UrlBreaks{{\\do\\/\\do\\-\\do\\.\\do\\:\\do\\?\\do\\=\\do\\&}}  % Allow breaks at these characters
+{LINKS_REFERENCES_KDP}
 
 % Chapter formatting optimized for KDP
 \\usepackage{{titlesec}}
@@ -389,23 +432,11 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 {{}}{{0pt}}{{\\Large}}
 \\titlespacing*{{\\chapter}}{{0pt}}{{30pt}}{{20pt}}
 
-% Table support
-\\usepackage{{booktabs}}
-\\usepackage{{longtable}}
-\\usepackage{{array}}
+{TABLE_AND_GRAPHICS}
 
-% Graphics support
-\\usepackage{{graphicx}}
+{LIST_FORMATTING}
 
-% Better list formatting
-\\usepackage{{enumitem}}
-\\setlist[itemize]{{leftmargin=*,topsep=3pt,itemsep=1pt}}
-\\setlist[enumerate]{{leftmargin=*,topsep=3pt,itemsep=1pt}}
-
-% Custom section numbering for KDP format (section mode)
-\\renewcommand{{\\thesection}}{{\\arabic{{section}}}}
-\\renewcommand{{\\thesubsection}}{{\\thesection.\\arabic{{subsection}}}}
-\\renewcommand{{\\thesubsubsection}}{{\\thesubsection.\\arabic{{subsubsection}}}}
+{SECTION_NUMBERING}
 
 \\begin{{document}}
 
@@ -444,11 +475,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
         # Single-column novel format (203x127mm, two-sided)
         preamble = f'''\\documentclass[11pt,twoside]{{book}}
 
-% Font setup - Minion Pro
-\\usepackage{{fontspec}}
-\\setmainfont{{Minion Pro}}
-\\setsansfont{{Myriad Pro}}
-\\setmonofont{{Consolas Ligaturized}}
+{FONT_SETUP}
 
 % Page layout for 203x127mm (8x5in) novel format
 \\usepackage[
@@ -460,9 +487,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     bottom=20mm      % Bottom margin
 ]{{geometry}}
 
-% Enhanced typography
-\\usepackage{{microtype}}  % Better letter spacing and word breaking
-\\usepackage{{setspace}}   % Line spacing control
+{TYPOGRAPHY_PACKAGES}
 
 % Paragraph formatting with spacing
 \\setlength{{\\parindent}}{{12pt}}
@@ -478,33 +503,9 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\renewcommand{{\\headrulewidth}}{{0pt}}
 \\setlength{{\\headheight}}{{14pt}}
 
-% Code highlighting
-\\usepackage{{listings}}
-\\usepackage{{xcolor}}
+{CODE_HIGHLIGHTING_STANDARD}
 
-\\lstset{{
-    basicstyle=\\ttfamily\\small,
-    breaklines=true,
-    frame=single,
-    backgroundcolor=\\color{{gray!10}},
-    commentstyle=\\color{{gray}},
-    keywordstyle=\\color{{blue}},
-    stringstyle=\\color{{red}},
-    numbers=left,
-    numberstyle=\\tiny\\color{{gray}},
-    stepnumber=1,
-    tabsize=2
-}}
-
-% Links and references
-\\usepackage{{hyperref}}
-\\hypersetup{{
-    colorlinks=true,
-    linkcolor=black,
-    urlcolor=blue,
-    citecolor=black,
-    pdfborder={{0 0 0}}
-}}
+{LINKS_REFERENCES_STANDARD}
 
 % Better chapter formatting for novel
 \\usepackage{{titlesec}}
@@ -513,23 +514,11 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 {{}}{{0pt}}{{\\Large}}
 \\titlespacing*{{\\chapter}}{{0pt}}{{30pt}}{{20pt}}
 
-% Table support
-\\usepackage{{booktabs}}
-\\usepackage{{longtable}}
-\\usepackage{{array}}
+{TABLE_AND_GRAPHICS}
 
-% Graphics support
-\\usepackage{{graphicx}}
+{LIST_FORMATTING}
 
-% Better list formatting
-\\usepackage{{enumitem}}
-\\setlist[itemize]{{leftmargin=*,topsep=3pt,itemsep=1pt}}
-\\setlist[enumerate]{{leftmargin=*,topsep=3pt,itemsep=1pt}}
-
-% Custom section numbering for novel format (section mode)
-\\renewcommand{{\\thesection}}{{\\arabic{{section}}}}
-\\renewcommand{{\\thesubsection}}{{\\thesection.\\arabic{{subsection}}}}
-\\renewcommand{{\\thesubsubsection}}{{\\thesubsection.\\arabic{{subsubsection}}}}
+{SECTION_NUMBERING}
 
 \\begin{{document}}
 
@@ -569,11 +558,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
         # Single-column royal format (234x156mm, two-sided)
         preamble = f'''\\documentclass[11pt,twoside]{{book}}
 
-% Font setup - Minion Pro
-\\usepackage{{fontspec}}
-\\setmainfont{{Minion Pro}}
-\\setsansfont{{Myriad Pro}}
-\\setmonofont{{Consolas Ligaturized}}
+{FONT_SETUP}
 
 % Page layout for 234x156mm Royal format
 \\usepackage[
@@ -585,9 +570,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     bottom=22mm      % Bottom margin
 ]{{geometry}}
 
-% Enhanced typography
-\\usepackage{{microtype}}  % Better letter spacing and word breaking
-\\usepackage{{setspace}}   % Line spacing control
+{TYPOGRAPHY_PACKAGES}
 
 % Paragraph formatting with spacing
 \\setlength{{\\parindent}}{{12pt}}
@@ -603,33 +586,9 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\renewcommand{{\\headrulewidth}}{{0pt}}
 \\setlength{{\\headheight}}{{14pt}}
 
-% Code highlighting
-\\usepackage{{listings}}
-\\usepackage{{xcolor}}
+{CODE_HIGHLIGHTING_STANDARD}
 
-\\lstset{{
-    basicstyle=\\ttfamily\\small,
-    breaklines=true,
-    frame=single,
-    backgroundcolor=\\color{{gray!10}},
-    commentstyle=\\color{{gray}},
-    keywordstyle=\\color{{blue}},
-    stringstyle=\\color{{red}},
-    numbers=left,
-    numberstyle=\\tiny\\color{{gray}},
-    stepnumber=1,
-    tabsize=2
-}}
-
-% Links and references
-\\usepackage{{hyperref}}
-\\hypersetup{{
-    colorlinks=true,
-    linkcolor=black,
-    urlcolor=blue,
-    citecolor=black,
-    pdfborder={{0 0 0}}
-}}
+{LINKS_REFERENCES_STANDARD}
 
 % Better chapter formatting for royal
 \\usepackage{{titlesec}}
@@ -638,23 +597,11 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 {{}}{{0pt}}{{\\Large}}
 \\titlespacing*{{\\chapter}}{{0pt}}{{30pt}}{{20pt}}
 
-% Table support
-\\usepackage{{booktabs}}
-\\usepackage{{longtable}}
-\\usepackage{{array}}
+{TABLE_AND_GRAPHICS}
 
-% Graphics support
-\\usepackage{{graphicx}}
+{LIST_FORMATTING}
 
-% Better list formatting
-\\usepackage{{enumitem}}
-\\setlist[itemize]{{leftmargin=*,topsep=3pt,itemsep=1pt}}
-\\setlist[enumerate]{{leftmargin=*,topsep=3pt,itemsep=1pt}}
-
-% Custom section numbering for royal format (section mode)
-\\renewcommand{{\\thesection}}{{\\arabic{{section}}}}
-\\renewcommand{{\\thesubsection}}{{\\thesection.\\arabic{{subsection}}}}
-\\renewcommand{{\\thesubsubsection}}{{\\thesubsection.\\arabic{{subsubsection}}}}
+{SECTION_NUMBERING}
 
 \\begin{{document}}
 
@@ -694,11 +641,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
         # Original A4 two-column format
         preamble = f'''\\documentclass[11pt,a4paper,oneside]{{book}}
 
-% Font setup - Minion Pro
-\\usepackage{{fontspec}}
-\\setmainfont{{Minion Pro}}
-\\setsansfont{{Myriad Pro}}
-\\setmonofont{{Consolas Ligaturized}}
+{FONT_SETUP}
 
 % Page layout optimized for A4 single-sided printing with balanced margins
 \\usepackage[
@@ -714,9 +657,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 % Two-column layout
 \\usepackage{{multicol}}
 
-% Enhanced typography
-\\usepackage{{microtype}}  % Better letter spacing and word breaking
-\\usepackage{{setspace}}   % Line spacing control
+{TYPOGRAPHY_PACKAGES}
 
 % Paragraph formatting with spacing
 \\setlength{{\\parindent}}{{0pt}}
@@ -732,33 +673,9 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\renewcommand{{\\headrulewidth}}{{0.4pt}}
 \\setlength{{\\headheight}}{{14pt}}
 
-% Code highlighting
-\\usepackage{{listings}}
-\\usepackage{{xcolor}}
+{CODE_HIGHLIGHTING_STANDARD}
 
-\\lstset{{
-    basicstyle=\\ttfamily\\small,
-    breaklines=true,
-    frame=single,
-    backgroundcolor=\\color{{gray!10}},
-    commentstyle=\\color{{gray}},
-    keywordstyle=\\color{{blue}},
-    stringstyle=\\color{{red}},
-    numbers=left,
-    numberstyle=\\tiny\\color{{gray}},
-    stepnumber=1,
-    tabsize=2
-}}
-
-% Links and references
-\\usepackage{{hyperref}}
-\\hypersetup{{
-    colorlinks=true,
-    linkcolor=black,
-    urlcolor=blue,
-    citecolor=black,
-    pdfborder={{0 0 0}}
-}}
+{LINKS_REFERENCES_STANDARD}
 
 % Better chapter formatting
 \\usepackage{{titlesec}}
@@ -767,23 +684,11 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 {{\\chaptertitlename\\ \\thechapter}}{{20pt}}{{\\Huge}}
 \\titlespacing*{{\\chapter}}{{0pt}}{{0pt}}{{40pt}}
 
-% Table support
-\\usepackage{{booktabs}}
-\\usepackage{{longtable}}
-\\usepackage{{array}}
+{TABLE_AND_GRAPHICS}
 
-% Graphics support
-\\usepackage{{graphicx}}
+{LIST_FORMATTING}
 
-% Better list formatting
-\\usepackage{{enumitem}}
-\\setlist[itemize]{{leftmargin=*,topsep=3pt,itemsep=1pt}}
-\\setlist[enumerate]{{leftmargin=*,topsep=3pt,itemsep=1pt}}
-
-% Custom section numbering for A4 format (section mode)
-\\renewcommand{{\\thesection}}{{\\arabic{{section}}}}
-\\renewcommand{{\\thesubsection}}{{\\thesection.\\arabic{{subsection}}}}
-\\renewcommand{{\\thesubsubsection}}{{\\thesubsection.\\arabic{{subsubsection}}}}
+{SECTION_NUMBERING}
 
 \\begin{{document}}
 
