@@ -832,6 +832,33 @@ def compile_pdf(tex_file):
     
     return True
 
+def cleanup_latex_files(tex_file, verbose=False):
+    """Remove intermediate LaTeX files, keeping only the PDF"""
+    base_name = tex_file.replace('.tex', '')
+    
+    # List of file extensions to remove
+    extensions_to_remove = ['.tex', '.aux', '.log', '.out', '.toc']
+    removed_files = []
+    
+    for ext in extensions_to_remove:
+        file_to_remove = base_name + ext
+        if os.path.exists(file_to_remove):
+            try:
+                os.remove(file_to_remove)
+                removed_files.append(file_to_remove)
+                if verbose:
+                    print(f"Removed: {file_to_remove}")
+            except OSError as e:
+                if verbose:
+                    print(f"Could not remove {file_to_remove}: {e}")
+    
+    if verbose and removed_files:
+        print(f"Cleanup complete. Removed {len(removed_files)} intermediate files.")
+    elif verbose:
+        print("No intermediate files to remove.")
+    
+    return removed_files
+
 def main():
     parser = argparse.ArgumentParser(
         description='Convert Markdown files to a professional book-style PDF'
@@ -886,6 +913,16 @@ def main():
         action='store_true',
         help='Create a single-column, 6x9 inch (152.4 x 228.6mm) format optimized for Amazon KDP'
     )
+    parser.add_argument(
+        '-c', '--cleanup',
+        action='store_true',
+        help='Remove intermediate LaTeX files (.aux, .log, .out, .tex, .toc) after compilation'
+    )
+    parser.add_argument(
+        '-v', '--verbose',
+        action='store_true',
+        help='Verbose output - list files being processed and removed'
+    )
     
     args = parser.parse_args()
     
@@ -929,16 +966,25 @@ def main():
     create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp)
     
     # Optionally compile to PDF
+    pdf_created = False
     if not args.no_compile:
         if compile_pdf(args.output):
             pdf_name = args.output.replace('.tex', '.pdf')
             print(f"PDF created successfully: {pdf_name}")
+            pdf_created = True
         else:
             print("PDF compilation failed. LaTeX file is still available.")
     
-    print("\nTo manually compile the LaTeX file, use:")
-    print(f"xelatex {args.output}")
-    print("(Run twice for proper cross-references)")
+    # Cleanup intermediate files if requested or by default when PDF was created
+    if args.cleanup or (pdf_created and not args.no_compile):
+        if args.verbose:
+            print("\nCleaning up intermediate files...")
+        cleanup_latex_files(args.output, args.verbose)
+    
+    if not pdf_created:
+        print("\nTo manually compile the LaTeX file, use:")
+        print(f"xelatex {args.output}")
+        print("(Run twice for proper cross-references)")
 
 if __name__ == '__main__':
     main()
