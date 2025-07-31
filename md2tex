@@ -216,6 +216,17 @@ def process_markdown_line(line, use_sections=False):
         title = process_formatting(title)
         return f"\\subparagraph{{{title}}}\n"
     
+    # Blockquotes
+    elif line.strip().startswith('>'):
+        # Handle both "> content" and ">" (empty blockquote)
+        if line.strip() == '>':
+            # Empty blockquote - just add a line break
+            return "\n"
+        else:
+            # Blockquote with content
+            content = process_formatting(line.strip()[2:])
+            return f"\\begin{{quote}}\n{content}\n\\end{{quote}}\n"
+    
     # Lists
     elif line.strip().startswith('- ') or line.strip().startswith('* '):
         content = process_formatting(line.strip()[2:])
@@ -315,6 +326,22 @@ def convert_markdown_file(md_file_path, use_sections=False):
         
         # Handle headers
         if line.startswith('#'):
+            if paragraph_buffer:
+                latex_content.append(' '.join(paragraph_buffer) + "\n\n")
+                paragraph_buffer = []
+            
+            if in_list:
+                latex_content.append("\\end{itemize}\n\n")
+                in_list = False
+            if in_ordered_list:
+                latex_content.append("\\end{enumerate}\n\n")
+                in_ordered_list = False
+            
+            latex_content.append(process_markdown_line(line, use_sections))
+            continue
+        
+        # Handle blockquotes
+        if line.strip().startswith('>'):
             if paragraph_buffer:
                 latex_content.append(' '.join(paragraph_buffer) + "\n\n")
                 paragraph_buffer = []
