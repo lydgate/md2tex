@@ -411,7 +411,7 @@ def convert_markdown_file(md_file_path, use_sections=False):
     
     return ''.join(latex_content)
 
-def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp=False):
+def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp=False, minimal=False):
     """Create the complete LaTeX document using variable-based templates"""
     
     if kdp:
@@ -495,6 +495,64 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 '''
         
         # KDP ending (no multicols)
+        ending = r'''
+\end{document}
+'''
+    elif minimal:
+        # Minimal format - clean, simple, no title page or headers (KDP 6x9 inch dimensions)
+        preamble = f'''\\documentclass[12pt,oneside]{{article}}
+
+{FONT_SETUP}
+
+% Page layout for minimal format - KDP 6x9 inch format (152.4 x 228.6mm)
+\\usepackage[
+    paperwidth=152.4mm,
+    paperheight=228.6mm,
+    left=15mm,       % Left margin
+    right=15mm,      % Right margin
+    top=19.1mm,      % 0.75in top margin
+    bottom=19.1mm    % 0.75in bottom margin
+]{{geometry}}
+
+{TYPOGRAPHY_PACKAGES}
+
+% Paragraph formatting with spacing
+\\setlength{{\\parindent}}{{12pt}}
+\\setlength{{\\parskip}}{{6pt plus 2pt minus 1pt}}
+
+% Simple page numbers only
+\\usepackage{{fancyhdr}}
+\\pagestyle{{fancy}}
+\\fancyhf{{}}
+\\fancyfoot[C]{{\\thepage}}
+\\renewcommand{{\\headrulewidth}}{{0pt}}
+\\renewcommand{{\\footrulewidth}}{{0pt}}
+
+{CODE_HIGHLIGHTING_STANDARD}
+
+{LINKS_REFERENCES_STANDARD}
+
+% Simple section formatting for minimal
+\\usepackage{{titlesec}}
+\\titleformat{{\\section}}
+{{\\normalfont\\Large\\bfseries}}
+{{\\thesection}}{{1em}}{{}}
+\\titlespacing*{{\\section}}{{0pt}}{{12pt}}{{6pt}}
+
+\\titleformat{{\\subsection}}
+{{\\normalfont\\large\\bfseries}}
+{{\\thesubsection}}{{1em}}{{}}
+\\titlespacing*{{\\subsection}}{{0pt}}{{12pt}}{{6pt}}
+
+{TABLE_AND_GRAPHICS}
+
+{LIST_FORMATTING}
+
+\\begin{{document}}
+
+'''
+        
+        # Minimal ending (no title page, no TOC, no multicols)
         ending = r'''
 \end{document}
 '''
@@ -758,6 +816,14 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     # Combine everything
     full_content = preamble
     
+    # Add title for minimal format using the first filename
+    if minimal and md_files:
+        first_file = Path(md_files[0])
+        file_title = first_file.stem  # filename without extension
+        # Convert underscores and hyphens to spaces, capitalize
+        file_title = file_title.replace('_', ' ').replace('-', ' ').title()
+        full_content += f"\\title{{{file_title}}}\n\\maketitle\n\n"
+    
     for md_file in sorted(md_files):
         print(f"Processing {md_file}...")
         file_content = convert_markdown_file(md_file, use_sections)
@@ -879,6 +945,11 @@ def main():
         help='Create a single-column, 6x9 inch (152.4 x 228.6mm) format optimized for Amazon KDP'
     )
     parser.add_argument(
+        '-m', '--minimal',
+        action='store_true',
+        help='Create a minimal PDF without title page, TOC, or headers - just content with page numbers'
+    )
+    parser.add_argument(
         '-c', '--cleanup',
         action='store_true',
         help='Remove intermediate LaTeX files (.aux, .log, .out, .tex, .toc) after compilation'
@@ -926,9 +997,9 @@ def main():
     subtitle = all_metadata.get('subtitle', args.subtitle)
     
     # Create the LaTeX document
-    # Use sections for novel, royal, and KDP formats by default
-    use_sections = args.sections or args.novel or args.royal or args.kdp
-    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp)
+    # Use sections for novel, royal, KDP, and minimal formats by default
+    use_sections = args.sections or args.novel or args.royal or args.kdp or args.minimal
+    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp, args.minimal)
     
     # Optionally compile to PDF
     pdf_created = False
