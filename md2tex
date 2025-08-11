@@ -424,8 +424,8 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\usepackage[
     paperwidth=152.4mm,
     paperheight=228.6mm,
-    inner=15.9mm,    % 0.625in inner margin for spine (suitable for 301-500 pages)
-    outer=12.7mm,    % 0.5in outer margin (well above 0.25in minimum)
+    inner=20mm,      % 0.79in inner margin for spine (conservative binding clearance)
+    outer=15mm,      % 0.59in outer margin (balanced with inner)
     top=19.1mm,      % 0.75in top margin (well above 0.25in minimum)
     bottom=19.1mm    % 0.75in bottom margin (well above 0.25in minimum)
 ]{{geometry}}
