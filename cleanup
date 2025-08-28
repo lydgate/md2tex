@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Cleanup script for temporary LaTeX files
+# Removes .aux, .log, .out, .toc, .tex, and other LaTeX temporary files
+
+echo "Cleaning up temporary LaTeX files..."
+
+# Remove common LaTeX temporary files
+rm -fv *.aux
+rm -fv *.log
+rm -fv *.out
+rm -fv *.toc
+rm -fv *.tex
+rm -fv *.synctex.gz
+rm -fv *.fdb_latexmk
+rm -fv *.fls
+rm -fv *.bbl
+rm -fv *.blg
+rm -fv *.idx
+rm -fv *.ind
+rm -fv *.ilg
+rm -fv *.glo
+rm -fv *.gls
+rm -fv *.glg
+rm -fv *.acn
+rm -fv *.acr
+rm -fv *.alg
+rm -fv *.ist
+rm -fv *.lot
+rm -fv *.lof
+rm -fv *.nav
+rm -fv *.snm
+rm -fv *.vrb
+rm -fv *.xdv
+
+# Remove files without extensions that are likely LaTeX temporary files
+# (like nn2_final, nn2_fixed, etc.)
+for file in nn2_* nn_* test_*; do
+    if [[ -f "$file" && ! "$file" =~ \. ]]; then
+        echo "removed '$file'"
+        rm -f "$file"
+    fi
+done
+
+echo "Cleanup complete!"
