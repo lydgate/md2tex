@@ -118,25 +118,30 @@ def escape_latex(text):
 
 def process_formatting(text):
     """Process bold, italic, and other formatting in text, then escape LaTeX"""
-    # Inline code (must be first to avoid conflicts)
+    # First, extract and protect all URLs from formatting processing
+    url_placeholders = []
+    
+    def protect_url(match):
+        nonlocal url_placeholders
+        link_text = match.group(1)
+        url = match.group(2)
+        placeholder_id = f"__URL_PLACEHOLDER_{len(url_placeholders)}__"
+        url_placeholders.append((placeholder_id, link_text, url))
+        return placeholder_id
+    
+    # Replace all URLs with placeholders
+    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', protect_url, text)
+    
+    # Inline code (must be early to avoid conflicts)
     text = re.sub(r'`([^`]+)`', r'\\texttt{\\detokenize{\1}}', text)
     
-    # Bold and italic
+    # Bold and italic (now applied to remaining text, links already processed)
     text = re.sub(r'\*\*\*([^*]+)\*\*\*', r'\\textbf{\\textit{\1}}', text)
     text = re.sub(r'\*\*([^*]+)\*\*', r'\\textbf{\1}', text)
     text = re.sub(r'\*([^*]+)\*', r'\\textit{\1}', text)
     text = re.sub(r'___([^_]+)___', r'\\textbf{\\textit{\1}}', text)
     text = re.sub(r'__([^_]+)__', r'\\textbf{\1}', text)
     text = re.sub(r'_([^_]+)_', r'\\textit{\1}', text)
-    
-    # Links - show text with hyperlink and footnote with URL for print
-    def process_link(match):
-        link_text = match.group(1)
-        url = match.group(2)
-        # Show the link text with hyperlink, and add footnote with URL
-        return f'\\href{{{url}}}{{{link_text}}}\\footnote{{\\url{{{url}}}}}'
-    
-    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', process_link, text)
     
     # Handle quotes - convert to LaTeX quote conventions
     # Single quotes: 'text' -> `text' (but avoid contractions like don't, won't)
@@ -163,6 +168,20 @@ def process_formatting(text):
     
     # Convert page ranges and similar constructs (pages 10-15, chapters 1-3)
     text = re.sub(r'(\b(?:pages?|chapters?|sections?|parts?|volumes?|numbers?|lines?|verses?|items?)\s+\d+)\s*-\s*(\d+)', r'\1--\2', text, flags=re.IGNORECASE)
+    
+    # Restore protected URLs after all formatting is done
+    for placeholder_id, link_text, url in url_placeholders:
+        # Process the link text for formatting (recursively, but without URLs)
+        formatted_link_text = link_text
+        formatted_link_text = re.sub(r'\*\*\*([^*]+)\*\*\*', r'\\textbf{\\textit{\1}}', formatted_link_text)
+        formatted_link_text = re.sub(r'\*\*([^*]+)\*\*', r'\\textbf{\1}', formatted_link_text)
+        formatted_link_text = re.sub(r'\*([^*]+)\*', r'\\textit{\1}', formatted_link_text)
+        formatted_link_text = re.sub(r'___([^_]+)___', r'\\textbf{\\textit{\1}}', formatted_link_text)
+        formatted_link_text = re.sub(r'__([^_]+)__', r'\\textbf{\1}', formatted_link_text)
+        formatted_link_text = re.sub(r'_([^_]+)_', r'\\textit{\1}', formatted_link_text)
+        # Create the final LaTeX link
+        latex_link = f'\\href{{{url}}}{{{formatted_link_text}}}\\footnote{{\\url{{{url}}}}}'
+        text = text.replace(placeholder_id, latex_link)
     
     # Escape remaining text
     return escape_latex(text)
@@ -847,11 +866,16 @@ def compile_pdf(tex_file):
     
     # Run XeLaTeX twice for proper cross-references
     for i in range(2):
+        # Clear problematic environment variables that interfere with TeX
+        env = os.environ.copy()
+        env.pop('TEXMF', None)
+        env.pop('TEXMFCNF', None)
+        
         result = subprocess.run([
-            'xelatex', 
+            '/usr/bin/xelatex',  # Use absolute path to avoid Cursor interference
             '-interaction=nonstopmode',
             tex_name
-        ], capture_output=True, text=True, cwd=tex_dir)
+        ], capture_output=True, text=True, cwd=tex_dir, env=env)
         
         if result.returncode != 0:
             print(f"XeLaTeX compilation failed on pass {i+1}:")
