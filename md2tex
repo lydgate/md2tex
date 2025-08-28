@@ -430,10 +430,10 @@ def convert_markdown_file(md_file_path, use_sections=False):
     
     return ''.join(latex_content)
 
-def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp=False, minimal=False):
+def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, minimal=False):
     """Create the complete LaTeX document using variable-based templates"""
     
-    if kdp:
+    if kdp_6x9:
         # KDP 6x9 inch format (152.4 x 228.6mm) optimized for Amazon KDP
         preamble = f'''\\documentclass[12pt,twoside]{{book}}
 
@@ -514,6 +514,90 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 '''
         
         # KDP ending (no multicols)
+        ending = r'''
+\end{document}
+'''
+    elif kdp_trade:
+        # Trade paperback format - 5.5x8.5 inch (13.97 x 21.59cm) optimized for readability
+        preamble = f'''\\documentclass[12pt,twoside]{{book}}
+
+{FONT_SETUP}
+
+% Page layout for Trade paperback 5.5x8.5 inch format (13.97 x 21.59cm)
+\\usepackage[
+    paperwidth=139.7mm,
+    paperheight=215.9mm,
+    inner=18mm,      % 0.71in inner margin for spine (conservative binding clearance)
+    outer=13mm,      % 0.51in outer margin (balanced with inner)
+    top=16mm,        % 0.63in top margin (well above 0.25in minimum)
+    bottom=16mm      % 0.63in bottom margin (well above 0.25in minimum)
+]{{geometry}}
+
+{TYPOGRAPHY_PACKAGES}
+
+% Paragraph formatting optimized for readability and margin compliance
+\\setlength{{\\parindent}}{{12pt}}
+\\setlength{{\\parskip}}{{0pt plus 1pt}}
+\\setlength{{\\emergencystretch}}{{3em}}  % Allow more flexibility in line breaking
+\\setlength{{\\tolerance}}{{9999}}        % Be more tolerant of spacing to avoid overfull lines
+
+% Headers and page numbers for trade two-sided format
+\\usepackage{{fancyhdr}}
+\\pagestyle{{fancy}}
+\\fancyhf{{}}
+\\fancyhead[LE,RO]{{\\thepage}}
+\\fancyhead[LO]{{\\nouppercase{{\\textit{{{title}}}}}}}
+\\fancyhead[RE]{{\\nouppercase{{{subtitle}}}}}
+\\renewcommand{{\\headrulewidth}}{{0pt}}
+\\setlength{{\\headheight}}{{14pt}}
+
+{CODE_HIGHLIGHTING_KDP}
+
+{LINKS_REFERENCES_KDP}
+
+% Chapter formatting optimized for trade paperback
+\\usepackage{{titlesec}}
+\\titleformat{{\\chapter}}[display]
+{{\\normalfont\\Large\\bfseries\\centering}}
+{{}}{{0pt}}{{\\Large}}
+\\titlespacing*{{\\chapter}}{{0pt}}{{30pt}}{{20pt}}
+
+{TABLE_AND_GRAPHICS}
+
+{LIST_FORMATTING}
+
+{SECTION_NUMBERING}
+
+\\begin{{document}}
+
+% Title page (trade paperback compliant)
+\\begin{{titlepage}}
+\\centering
+\\vspace*{{3cm}}
+
+{{\\Large\\bfseries {title}}}
+
+\\vspace{{1cm}}
+
+{{\\normalsize {subtitle}}}
+
+\\vspace{{2cm}}
+
+{{\\normalsize {author}}}
+
+\\vfill
+
+{{\\small\\today}}
+
+\\end{{titlepage}}
+
+% Table of contents
+\\tableofcontents
+\\newpage
+
+'''
+        
+        # Trade ending (no multicols)
         ending = r'''
 \end{document}
 '''
@@ -964,9 +1048,14 @@ def main():
         help='Create a single-column, two-sided, 234x156mm format royal'
     )
     parser.add_argument(
-        '--kdp',
+        '--kdp-6x9',
         action='store_true',
         help='Create a single-column, 6x9 inch (152.4 x 228.6mm) format optimized for Amazon KDP'
+    )
+    parser.add_argument(
+        '--kdp-trade',
+        action='store_true',
+        help='Create a single-column, 5.5x8.5 inch (13.97 x 21.59cm) trade paperback format optimized for Amazon KDP'
     )
     parser.add_argument(
         '-m', '--minimal',
@@ -1022,8 +1111,8 @@ def main():
     
     # Create the LaTeX document
     # Use sections for novel, royal, KDP, and minimal formats by default
-    use_sections = args.sections or args.novel or args.royal or args.kdp or args.minimal
-    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp, args.minimal)
+    use_sections = args.sections or args.novel or args.royal or args.kdp_6x9 or args.kdp_trade or args.minimal
+    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.minimal)
     
     # Optionally compile to PDF
     pdf_created = False
