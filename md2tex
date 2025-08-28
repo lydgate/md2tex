@@ -430,7 +430,7 @@ def convert_markdown_file(md_file_path, use_sections=False):
     
     return ''.join(latex_content)
 
-def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, minimal=False):
+def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, kdp_mass_market=False, kdp_mass_market_wide=False, minimal=False):
     """Create the complete LaTeX document using variable-based templates"""
     
     if kdp_6x9:
@@ -598,6 +598,174 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 '''
         
         # Trade ending (no multicols)
+        ending = r'''
+\end{document}
+'''
+    elif kdp_mass_market:
+        # Mass market paperback format - 5x8 inch (12.7 x 20.32cm) optimized for compact reading
+        preamble = f'''\\documentclass[11pt,twoside]{{book}}
+
+{FONT_SETUP}
+
+% Page layout for Mass market paperback 5x8 inch format (12.7 x 20.32cm)
+\\usepackage[
+    paperwidth=127mm,
+    paperheight=203.2mm,
+    inner=16mm,      % 0.63in inner margin for spine (conservative binding clearance)
+    outer=12mm,      % 0.47in outer margin (balanced with inner)
+    top=14mm,        % 0.55in top margin (well above 0.25in minimum)
+    bottom=14mm      % 0.55in bottom margin (well above 0.25in minimum)
+]{{geometry}}
+
+{TYPOGRAPHY_PACKAGES}
+
+% Paragraph formatting optimized for compact reading and margin compliance
+\\setlength{{\\parindent}}{{10pt}}
+\\setlength{{\\parskip}}{{0pt plus 1pt}}
+\\setlength{{\\emergencystretch}}{{3em}}  % Allow more flexibility in line breaking
+\\setlength{{\\tolerance}}{{9999}}        % Be more tolerant of spacing to avoid overfull lines
+
+% Headers and page numbers for mass market two-sided format
+\\usepackage{{fancyhdr}}
+\\pagestyle{{fancy}}
+\\fancyhf{{}}
+\\fancyhead[LE,RO]{{\\thepage}}
+\\fancyhead[LO]{{\\nouppercase{{\\textit{{{title}}}}}}}
+\\fancyhead[RE]{{\\nouppercase{{{subtitle}}}}}
+\\renewcommand{{\\headrulewidth}}{{0pt}}
+\\setlength{{\\headheight}}{{14pt}}
+
+{CODE_HIGHLIGHTING_KDP}
+
+{LINKS_REFERENCES_KDP}
+
+% Chapter formatting optimized for mass market paperback
+\\usepackage{{titlesec}}
+\\titleformat{{\\chapter}}[display]
+{{\\normalfont\\Large\\bfseries\\centering}}
+{{}}{{0pt}}{{\\Large}}
+\\titlespacing*{{\\chapter}}{{0pt}}{{25pt}}{{15pt}}
+
+{TABLE_AND_GRAPHICS}
+
+{LIST_FORMATTING}
+
+{SECTION_NUMBERING}
+
+\\begin{{document}}
+
+% Title page (mass market paperback compliant)
+\\begin{{titlepage}}
+\\centering
+\\vspace*{{2.5cm}}
+
+{{\\Large\\bfseries {title}}}
+
+\\vspace{{0.8cm}}
+
+{{\\normalsize {subtitle}}}
+
+\\vspace{{1.5cm}}
+
+{{\\normalsize {author}}}
+
+\\vfill
+
+{{\\small\\today}}
+
+\\end{{titlepage}}
+
+% Table of contents
+\\tableofcontents
+\\newpage
+
+'''
+        
+        # Mass market ending (no multicols)
+        ending = r'''
+\end{document}
+'''
+    elif kdp_mass_market_wide:
+        # Wide mass market paperback format - 5.25x8 inch (13.34 x 20.32cm) optimized for readability
+        preamble = f'''\\documentclass[11pt,twoside]{{book}}
+
+{FONT_SETUP}
+
+% Page layout for Wide mass market paperback 5.25x8 inch format (13.34 x 20.32cm)
+\\usepackage[
+    paperwidth=133.4mm,
+    paperheight=203.2mm,
+    inner=17mm,      % 0.67in inner margin for spine (conservative binding clearance)
+    outer=12.5mm,    % 0.49in outer margin (balanced with inner)
+    top=15mm,        % 0.59in top margin (well above 0.25in minimum)
+    bottom=15mm      % 0.59in bottom margin (well above 0.25in minimum)
+]{{geometry}}
+
+{TYPOGRAPHY_PACKAGES}
+
+% Paragraph formatting optimized for readability and margin compliance
+\\setlength{{\\parindent}}{{11pt}}
+\\setlength{{\\parskip}}{{0pt plus 1pt}}
+\\setlength{{\\emergencystretch}}{{3em}}  % Allow more flexibility in line breaking
+\\setlength{{\\tolerance}}{{9999}}        % Be more tolerant of spacing to avoid overfull lines
+
+% Headers and page numbers for wide mass market two-sided format
+\\usepackage{{fancyhdr}}
+\\pagestyle{{fancy}}
+\\fancyhf{{}}
+\\fancyhead[LE,RO]{{\\thepage}}
+\\fancyhead[LO]{{\\nouppercase{{\\textit{{{title}}}}}}}
+\\fancyhead[RE]{{\\nouppercase{{{subtitle}}}}}
+\\renewcommand{{\\headrulewidth}}{{0pt}}
+\\setlength{{\\headheight}}{{14pt}}
+
+{CODE_HIGHLIGHTING_KDP}
+
+{LINKS_REFERENCES_KDP}
+
+% Chapter formatting optimized for wide mass market paperback
+\\usepackage{{titlesec}}
+\\titleformat{{\\chapter}}[display]
+{{\\normalfont\\Large\\bfseries\\centering}}
+{{}}{{0pt}}{{\\Large}}
+\\titlespacing*{{\\chapter}}{{0pt}}{{25pt}}{{15pt}}
+
+{TABLE_AND_GRAPHICS}
+
+{LIST_FORMATTING}
+
+{SECTION_NUMBERING}
+
+\\begin{{document}}
+
+% Title page (wide mass market paperback compliant)
+\\begin{{titlepage}}
+\\centering
+\\vspace*{{2.5cm}}
+
+{{\\Large\\bfseries {title}}}
+
+\\vspace{{0.8cm}}
+
+{{\\normalsize {subtitle}}}
+
+\\vspace{{1.5cm}}
+
+{{\\normalsize {author}}}
+
+\\vfill
+
+{{\\small\\today}}
+
+\\end{{titlepage}}
+
+% Table of contents
+\\tableofcontents
+\\newpage
+
+'''
+        
+        # Wide mass market ending (no multicols)
         ending = r'''
 \end{document}
 '''
@@ -1058,6 +1226,16 @@ def main():
         help='Create a single-column, 5.5x8.5 inch (13.97 x 21.59cm) trade paperback format optimized for Amazon KDP'
     )
     parser.add_argument(
+        '--kdp-mass-market',
+        action='store_true',
+        help='Create a single-column, 5x8 inch (12.7 x 20.32cm) mass market paperback format optimized for Amazon KDP'
+    )
+    parser.add_argument(
+        '--kdp-mass-market-wide',
+        action='store_true',
+        help='Create a single-column, 5.25x8 inch (13.34 x 20.32cm) wide mass market paperback format optimized for Amazon KDP'
+    )
+    parser.add_argument(
         '-m', '--minimal',
         action='store_true',
         help='Create a minimal PDF without title page, TOC, or headers - just content with page numbers'
@@ -1111,8 +1289,8 @@ def main():
     
     # Create the LaTeX document
     # Use sections for novel, royal, KDP, and minimal formats by default
-    use_sections = args.sections or args.novel or args.royal or args.kdp_6x9 or args.kdp_trade or args.minimal
-    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.minimal)
+    use_sections = args.sections or args.novel or args.royal or args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.minimal
+    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.kdp_mass_market, args.kdp_mass_market_wide, args.minimal)
     
     # Optionally compile to PDF
     pdf_created = False
