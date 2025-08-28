@@ -443,10 +443,10 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\usepackage[
     paperwidth=152.4mm,
     paperheight=228.6mm,
-    inner=20mm,      % 0.79in inner margin for spine (conservative binding clearance)
-    outer=15mm,      % 0.59in outer margin (balanced with inner)
-    top=19.1mm,      % 0.75in top margin (well above 0.25in minimum)
-    bottom=19.1mm    % 0.75in bottom margin (well above 0.25in minimum)
+    inner=22mm,      % 0.87in inner margin for spine (KDP minimum + binding clearance)
+    outer=16mm,      % 0.63in outer margin (KDP minimum + safety)
+    top=20mm,        % 0.79in top margin (KDP minimum + safety)
+    bottom=20mm      % 0.79in bottom margin (KDP minimum + safety)
 ]{{geometry}}
 
 {TYPOGRAPHY_PACKAGES}
@@ -457,6 +457,12 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\setlength{{\\emergencystretch}}{{3em}}  % Allow more flexibility in line breaking
 \\setlength{{\\tolerance}}{{9999}}        % Be more tolerant of spacing to avoid overfull lines
 
+% Additional KDP compliance settings
+\\setlength{{\\overfullrule}}{{0pt}}      % Don't show overfull boxes
+\\setlength{{\\hfuzz}}{{0.5pt}}           % Allow small overfull lines
+\\setlength{{\\vfuzz}}{{0.5pt}}           % Allow small overfull lines
+\\raggedbottom                            % Don't stretch content to fill pages
+
 % Headers and page numbers for KDP two-sided format
 \\usepackage{{fancyhdr}}
 \\pagestyle{{fancy}}
@@ -465,7 +471,8 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\fancyhead[LO]{{\\nouppercase{{\\textit{{{title}}}}}}}
 \\fancyhead[RE]{{\\nouppercase{{{subtitle}}}}}
 \\renewcommand{{\\headrulewidth}}{{0pt}}
-\\setlength{{\\headheight}}{{14pt}}
+\\setlength{{\\headheight}}{{16pt}}
+\\setlength{{\\headsep}}{{8pt}}
 
 {CODE_HIGHLIGHTING_KDP}
 
@@ -527,10 +534,10 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\usepackage[
     paperwidth=139.7mm,
     paperheight=215.9mm,
-    inner=18mm,      % 0.71in inner margin for spine (conservative binding clearance)
-    outer=13mm,      % 0.51in outer margin (balanced with inner)
-    top=16mm,        % 0.63in top margin (well above 0.25in minimum)
-    bottom=16mm      % 0.63in bottom margin (well above 0.25in minimum)
+    inner=20mm,      % 0.79in inner margin for spine (KDP minimum + binding clearance)
+    outer=15mm,      % 0.59in outer margin (KDP minimum + safety)
+    top=18mm,        % 0.71in top margin (KDP minimum + safety)
+    bottom=18mm      % 0.71in bottom margin (KDP minimum + safety)
 ]{{geometry}}
 
 {TYPOGRAPHY_PACKAGES}
@@ -541,6 +548,12 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\setlength{{\\emergencystretch}}{{3em}}  % Allow more flexibility in line breaking
 \\setlength{{\\tolerance}}{{9999}}        % Be more tolerant of spacing to avoid overfull lines
 
+% Additional KDP compliance settings
+\\setlength{{\\overfullrule}}{{0pt}}      % Don't show overfull boxes
+\\setlength{{\\hfuzz}}{{0.5pt}}           % Allow small overfull lines
+\\setlength{{\\vfuzz}}{{0.5pt}}           % Allow small overfull lines
+\\raggedbottom                            % Don't stretch content to fill pages
+
 % Headers and page numbers for trade two-sided format
 \\usepackage{{fancyhdr}}
 \\pagestyle{{fancy}}
@@ -549,7 +562,8 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\fancyhead[LO]{{\\nouppercase{{\\textit{{{title}}}}}}}
 \\fancyhead[RE]{{\\nouppercase{{{subtitle}}}}}
 \\renewcommand{{\\headrulewidth}}{{0pt}}
-\\setlength{{\\headheight}}{{14pt}}
+\\setlength{{\\headheight}}{{16pt}}
+\\setlength{{\\headsep}}{{8pt}}
 
 {CODE_HIGHLIGHTING_KDP}
 
@@ -611,10 +625,10 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\usepackage[
     paperwidth=127mm,
     paperheight=203.2mm,
-    inner=16mm,      % 0.63in inner margin for spine (conservative binding clearance)
-    outer=12mm,      % 0.47in outer margin (balanced with inner)
-    top=14mm,        % 0.55in top margin (well above 0.25in minimum)
-    bottom=14mm      % 0.55in bottom margin (well above 0.25in minimum)
+    inner=18mm,      % 0.71in inner margin for spine (KDP minimum + binding clearance)
+    outer=14mm,      % 0.55in outer margin (KDP minimum + safety)
+    top=20mm,        % 0.79in top margin (increased for header safety)
+    bottom=16mm      % 0.63in bottom margin (KDP minimum + safety)
 ]{{geometry}}
 
 {TYPOGRAPHY_PACKAGES}
@@ -625,6 +639,12 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\setlength{{\\emergencystretch}}{{3em}}  % Allow more flexibility in line breaking
 \\setlength{{\\tolerance}}{{9999}}        % Be more tolerant of spacing to avoid overfull lines
 
+% Additional KDP compliance settings
+\\setlength{{\\overfullrule}}{{0pt}}      % Don't show overfull boxes
+\\setlength{{\\hfuzz}}{{0.5pt}}           % Allow small overfull lines
+\\setlength{{\\vfuzz}}{{0.5pt}}           % Allow small overfull lines
+\\raggedbottom                            % Don't stretch content to fill pages
+
 % Headers and page numbers for mass market two-sided format
 \\usepackage{{fancyhdr}}
 \\pagestyle{{fancy}}
@@ -633,7 +653,8 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\fancyhead[LO]{{\\nouppercase{{\\textit{{{title}}}}}}}
 \\fancyhead[RE]{{\\nouppercase{{{subtitle}}}}}
 \\renewcommand{{\\headrulewidth}}{{0pt}}
-\\setlength{{\\headheight}}{{14pt}}
+\\setlength{{\\headheight}}{{16pt}}
+\\setlength{{\\headsep}}{{8pt}}
 
 {CODE_HIGHLIGHTING_KDP}
 
@@ -695,10 +716,10 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\usepackage[
     paperwidth=133.4mm,
     paperheight=203.2mm,
-    inner=17mm,      % 0.67in inner margin for spine (conservative binding clearance)
-    outer=12.5mm,    % 0.49in outer margin (balanced with inner)
-    top=15mm,        % 0.59in top margin (well above 0.25in minimum)
-    bottom=15mm      % 0.59in bottom margin (well above 0.25in minimum)
+    inner=19mm,      % 0.75in inner margin for spine (KDP minimum + binding clearance)
+    outer=14.5mm,    % 0.57in outer margin (KDP minimum + safety)
+    top=17mm,        % 0.67in top margin (KDP minimum + safety)
+    bottom=17mm      % 0.67in bottom margin (KDP minimum + safety)
 ]{{geometry}}
 
 {TYPOGRAPHY_PACKAGES}
@@ -709,6 +730,12 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\setlength{{\\emergencystretch}}{{3em}}  % Allow more flexibility in line breaking
 \\setlength{{\\tolerance}}{{9999}}        % Be more tolerant of spacing to avoid overfull lines
 
+% Additional KDP compliance settings
+\\setlength{{\\overfullrule}}{{0pt}}      % Don't show overfull boxes
+\\setlength{{\\hfuzz}}{{0.5pt}}           % Allow small overfull lines
+\\setlength{{\\vfuzz}}{{0.5pt}}           % Allow small overfull lines
+\\raggedbottom                            % Don't stretch content to fill pages
+
 % Headers and page numbers for wide mass market two-sided format
 \\usepackage{{fancyhdr}}
 \\pagestyle{{fancy}}
@@ -717,7 +744,8 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\fancyhead[LO]{{\\nouppercase{{\\textit{{{title}}}}}}}
 \\fancyhead[RE]{{\\nouppercase{{{subtitle}}}}}
 \\renewcommand{{\\headrulewidth}}{{0pt}}
-\\setlength{{\\headheight}}{{14pt}}
+\\setlength{{\\headheight}}{{16pt}}
+\\setlength{{\\headsep}}{{8pt}}
 
 {CODE_HIGHLIGHTING_KDP}
 
