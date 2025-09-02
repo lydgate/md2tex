@@ -90,7 +90,15 @@ TABLE_AND_GRAPHICS = r"""% Table support
 LIST_FORMATTING = r"""% Better list formatting
 \usepackage{enumitem}
 \setlist[itemize]{leftmargin=*,topsep=3pt,itemsep=1pt}
-\setlist[enumerate]{leftmargin=*,topsep=3pt,itemsep=1pt}"""
+\setlist[enumerate]{leftmargin=*,topsep=3pt,itemsep=1pt}
+
+% Todolist support
+\usepackage{amssymb}
+\usepackage{graphicx}
+\newlist{todolist}{itemize}{1}
+\setlist[todolist]{label=\scalebox{1.5}{☐}, leftmargin=*, topsep=3pt, itemsep=1pt}
+\newcommand{\checkeditem}{\item[\scalebox{1.5}{☑}]}
+\newcommand{\uncheckeditem}{\item[\scalebox{1.5}{☐}]}"""
 
 SECTION_NUMBERING = r"""% Custom section numbering for section mode
 \renewcommand{\thesection}{\arabic{section}}
@@ -246,6 +254,17 @@ def process_markdown_line(line, use_sections=False):
             content = process_formatting(line.strip()[2:])
             return f"\\begin{{quote}}\n{content}\n\\end{{quote}}\n"
     
+    # Todolist items
+    elif re.match(r'^\s*- \[([ x])\]\s+', line):
+        # Extract checkbox state and content
+        match = re.match(r'^\s*- \[([ x])\]\s+(.*)', line)
+        checked = match.group(1) == 'x'
+        content = process_formatting(match.group(2))
+        if checked:
+            return f"\\checkeditem {content}"
+        else:
+            return f"\\uncheckeditem {content}"
+    
     # Lists
     elif line.strip().startswith('- ') or line.strip().startswith('* '):
         content = process_formatting(line.strip()[2:])
@@ -308,6 +327,7 @@ def convert_markdown_file(md_file_path, use_sections=False):
     latex_content = []
     in_list = False
     in_ordered_list = False
+    in_todolist = False
     in_code_block = False
     paragraph_buffer = []
     
@@ -355,6 +375,9 @@ def convert_markdown_file(md_file_path, use_sections=False):
             if in_ordered_list:
                 latex_content.append("\\end{enumerate}\n\n")
                 in_ordered_list = False
+            if in_todolist:
+                latex_content.append("\\end{todolist}\n\n")
+                in_todolist = False
             
             latex_content.append(process_markdown_line(line, use_sections))
             continue
@@ -371,8 +394,30 @@ def convert_markdown_file(md_file_path, use_sections=False):
             if in_ordered_list:
                 latex_content.append("\\end{enumerate}\n\n")
                 in_ordered_list = False
+            if in_todolist:
+                latex_content.append("\\end{todolist}\n\n")
+                in_todolist = False
             
             latex_content.append(process_markdown_line(line, use_sections))
+            continue
+        
+        # Handle todolist items
+        if re.match(r'^\s*- \[([ x])\]\s+', line):
+            if paragraph_buffer:
+                latex_content.append(' '.join(paragraph_buffer) + "\n\n")
+                paragraph_buffer = []
+            
+            if not in_todolist:
+                if in_list:
+                    latex_content.append("\\end{itemize}\n\n")
+                    in_list = False
+                if in_ordered_list:
+                    latex_content.append("\\end{enumerate}\n\n")
+                    in_ordered_list = False
+                latex_content.append("\\begin{todolist}\n")
+                in_todolist = True
+            
+            latex_content.append(process_markdown_line(line, use_sections) + "\n")
             continue
         
         # Handle lists
@@ -385,6 +430,9 @@ def convert_markdown_file(md_file_path, use_sections=False):
                 if in_ordered_list:
                     latex_content.append("\\end{enumerate}\n\n")
                     in_ordered_list = False
+                if in_todolist:
+                    latex_content.append("\\end{todolist}\n\n")
+                    in_todolist = False
                 latex_content.append("\\begin{itemize}\n")
                 in_list = True
             
@@ -400,6 +448,9 @@ def convert_markdown_file(md_file_path, use_sections=False):
                 if in_list:
                     latex_content.append("\\end{itemize}\n\n")
                     in_list = False
+                if in_todolist:
+                    latex_content.append("\\end{todolist}\n\n")
+                    in_todolist = False
                 latex_content.append("\\begin{enumerate}\n")
                 in_ordered_list = True
             
@@ -413,6 +464,9 @@ def convert_markdown_file(md_file_path, use_sections=False):
         if in_ordered_list:
             latex_content.append("\\end{enumerate}\n\n")
             in_ordered_list = False
+        if in_todolist:
+            latex_content.append("\\end{todolist}\n\n")
+            in_todolist = False
         
         # Regular paragraph content
         processed_line = process_markdown_line(line, use_sections).strip()
@@ -427,6 +481,8 @@ def convert_markdown_file(md_file_path, use_sections=False):
         latex_content.append("\\end{itemize}\n\n")
     if in_ordered_list:
         latex_content.append("\\end{enumerate}\n\n")
+    if in_todolist:
+        latex_content.append("\\end{todolist}\n\n")
     
     return ''.join(latex_content)
 
