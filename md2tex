@@ -65,6 +65,12 @@ LINKS_REFERENCES_BASE = r"""% Links and references
     citecolor=black,
     pdfborder={0 0 0}"""
 
+FOOTNOTE_SUPPORT = r"""% Footnote support for markdown-style footnotes
+\usepackage{footnote}
+\makeatletter
+\newcommand{\footnoteid}[1]{#1}
+\makeatother"""
+
 # KDP has additional URL breaking features
 LINKS_REFERENCES_KDP = LINKS_REFERENCES_BASE + r""",
     breaklinks=true  % Allow URLs to break across lines
@@ -163,12 +169,25 @@ def process_formatting(text, keep_comments=False):
         nonlocal url_placeholders
         link_text = match.group(1)
         url = match.group(2)
-        placeholder_id = f"__URL_PLACEHOLDER_{len(url_placeholders)}__"
+        placeholder_id = f"URLPLACEHOLDER{len(url_placeholders)}"
         url_placeholders.append((placeholder_id, link_text, url))
         return placeholder_id
     
     # Replace all URLs with placeholders
     text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', protect_url, text)
+    
+    # Extract and protect footnote references from formatting processing
+    footnote_placeholders = []
+    
+    def protect_footnote_ref(match):
+        nonlocal footnote_placeholders
+        footnote_id = match.group(1)
+        placeholder_id = f"FOOTNOTEREFPLACEHOLDER{len(footnote_placeholders)}"
+        footnote_placeholders.append((placeholder_id, footnote_id))
+        return placeholder_id
+    
+    # Replace footnote references with placeholders
+    text = re.sub(r'\[\^([^\]]+)\]', protect_footnote_ref, text)
     
     # Inline code (must be early to avoid conflicts)
     text = re.sub(r'`([^`]+)`', r'\\texttt{\\detokenize{\1}}', text)
@@ -218,8 +237,14 @@ def process_formatting(text, keep_comments=False):
         formatted_link_text = re.sub(r'__([^_]+)__', r'\\textbf{\1}', formatted_link_text)
         formatted_link_text = re.sub(r'_([^_]+)_', r'\\textit{\1}', formatted_link_text)
         # Create the final LaTeX link
-        latex_link = f'\\href{{{url}}}{{{formatted_link_text}}}\\footnote{{\\url{{{url}}}}}'
+        latex_link = f'\\href{{{url}}}{{{formatted_link_text}}}'
         text = text.replace(placeholder_id, latex_link)
+    
+    # Restore protected footnote references after all formatting is done
+    for placeholder_id, footnote_id in footnote_placeholders:
+        # Create LaTeX footnote reference using a simple approach
+        latex_footnote_ref = f'\\footnotemark[\\footnoteid{{{footnote_id}}}]'
+        text = text.replace(placeholder_id, latex_footnote_ref)
     
     # Escape remaining text
     return escape_latex(text)
@@ -316,6 +341,25 @@ def process_markdown_line(line, use_sections=False, keep_comments=False):
     # Regular paragraph content - use process_formatting for consistency
     return process_formatting(line, keep_comments) + "\n"
 
+def extract_footnote_definitions(lines):
+    """Extract footnote definitions from markdown lines and return processed lines and footnotes"""
+    processed_lines = []
+    footnotes = {}
+    
+    for line in lines:
+        # Check if this line is a footnote definition: [^id]: content
+        footnote_match = re.match(r'^\[\^([^\]]+)\]:\s*(.*)$', line.strip())
+        if footnote_match:
+            footnote_id = footnote_match.group(1)
+            footnote_content = footnote_match.group(2)
+            # Process the footnote content for formatting
+            processed_content = process_formatting(footnote_content)
+            footnotes[footnote_id] = processed_content
+        else:
+            processed_lines.append(line)
+    
+    return processed_lines, footnotes
+
 def extract_yaml_front_matter(lines):
     """Extract YAML front matter from the beginning of a markdown file"""
     if not lines or not lines[0].strip().startswith('---'):
@@ -353,6 +397,9 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False)
     
     # Extract YAML front matter
     yaml_metadata, content_lines = extract_yaml_front_matter(lines)
+    
+    # Extract footnote definitions
+    content_lines, footnotes = extract_footnote_definitions(content_lines)
     
     latex_content = []
     in_list = False
@@ -526,6 +573,13 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False)
     if in_todolist:
         latex_content.append("\\end{todolist}\n\n")
     
+    # Add footnote definitions at the end
+    if footnotes:
+        latex_content.append("\\vspace{1em}\n")
+        for footnote_id, footnote_content in footnotes.items():
+            latex_content.append(f"\\footnotetext[\\footnoteid{{{footnote_id}}}]{{{footnote_content}}}\n")
+        latex_content.append("\n")
+    
     return ''.join(latex_content)
 
 def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, kdp_mass_market=False, kdp_mass_market_wide=False, minimal=False, keep_comments=False):
@@ -575,6 +629,8 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 {CODE_HIGHLIGHTING_KDP}
 
 {LINKS_REFERENCES_KDP}
+
+{FOOTNOTE_SUPPORT}
 
 % Chapter formatting optimized for KDP
 \\usepackage{{titlesec}}
@@ -667,6 +723,8 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 
 {LINKS_REFERENCES_KDP}
 
+{FOOTNOTE_SUPPORT}
+
 % Chapter formatting optimized for trade paperback
 \\usepackage{{titlesec}}
 \\titleformat{{\\chapter}}[display]
@@ -757,6 +815,8 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 {CODE_HIGHLIGHTING_KDP}
 
 {LINKS_REFERENCES_KDP}
+
+{FOOTNOTE_SUPPORT}
 
 % Chapter formatting optimized for mass market paperback
 \\usepackage{{titlesec}}
@@ -849,6 +909,8 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 
 {LINKS_REFERENCES_KDP}
 
+{FOOTNOTE_SUPPORT}
+
 % Chapter formatting optimized for wide mass market paperback
 \\usepackage{{titlesec}}
 \\titleformat{{\\chapter}}[display]
@@ -929,6 +991,8 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 
 {LINKS_REFERENCES_STANDARD}
 
+{FOOTNOTE_SUPPORT}
+
 % Simple section formatting for minimal
 \\usepackage{{titlesec}}
 \\titleformat{{\\section}}
@@ -988,6 +1052,8 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 {CODE_HIGHLIGHTING_STANDARD}
 
 {LINKS_REFERENCES_STANDARD}
+
+{FOOTNOTE_SUPPORT}
 
 % Better chapter formatting for novel
 \\usepackage{{titlesec}}
@@ -1071,6 +1137,8 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 {CODE_HIGHLIGHTING_STANDARD}
 
 {LINKS_REFERENCES_STANDARD}
+
+{FOOTNOTE_SUPPORT}
 
 % Better chapter formatting for royal
 \\usepackage{{titlesec}}
@@ -1158,6 +1226,8 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 {CODE_HIGHLIGHTING_STANDARD}
 
 {LINKS_REFERENCES_STANDARD}
+
+{FOOTNOTE_SUPPORT}
 
 % Better chapter formatting
 \\usepackage{{titlesec}}
