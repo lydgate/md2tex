@@ -111,6 +111,53 @@ SECTION_NUMBERING = r"""% Custom section numbering for section mode
 \renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
 \renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}"""
 
+def is_markdown_file(file_path):
+    """Check if a file is actually a markdown file by examining its content"""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            # Read first few lines to check for markdown patterns
+            lines = [f.readline().strip() for _ in range(10)]
+            content = '\n'.join(lines)
+        
+        # Check for LaTeX indicators (if present, it's probably not markdown)
+        latex_indicators = [
+            r'\\documentclass',
+            r'\\usepackage',
+            r'\\begin\{',
+            r'\\end\{',
+            r'\\section\{',
+            r'\\chapter\{',
+            r'\\href\{',
+            r'\\footnote\{'
+        ]
+        
+        for pattern in latex_indicators:
+            if re.search(pattern, content):
+                return False
+        
+        # Check for markdown indicators
+        markdown_indicators = [
+            r'^#\s+',  # Headers
+            r'^\*\s+',  # Lists
+            r'^\d+\.\s+',  # Numbered lists
+            r'\[.*\]\(.*\)',  # Links
+            r'```',  # Code blocks
+            r'^\>\s+',  # Blockquotes
+            r'\[\^.*\]:',  # Footnote definitions
+            r'\[\^.*\]',  # Footnote references
+        ]
+        
+        for pattern in markdown_indicators:
+            if re.search(pattern, content, re.MULTILINE):
+                return True
+        
+        # If no clear indicators, check file extension
+        return file_path.lower().endswith('.md')
+        
+    except (UnicodeDecodeError, IOError):
+        # If we can't read the file, assume it's not markdown
+        return False
+
 def escape_latex(text):
     """Escape special LaTeX characters in text, but preserve LaTeX commands"""
     # Dictionary of LaTeX special characters and their escaped versions
@@ -1474,6 +1521,20 @@ def main():
     if not md_files:
         print("No Markdown files found!")
         sys.exit(1)
+    
+    # Validate that files are actually markdown
+    valid_md_files = []
+    for file_path in md_files:
+        if is_markdown_file(file_path):
+            valid_md_files.append(file_path)
+        else:
+            print(f"Warning: {file_path} does not appear to be a markdown file (skipping)")
+    
+    if not valid_md_files:
+        print("No valid markdown files found!")
+        sys.exit(1)
+    
+    md_files = valid_md_files
     
     # Set default output filename based on input if not explicitly provided
     if args.output == 'book.tex' and len(md_files) == 1:
