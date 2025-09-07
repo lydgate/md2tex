@@ -157,7 +157,7 @@ def strip_html_comments(text, keep_comments=False):
         text = re.sub(r'<!--[^>]*-->', '', text)
         return text
 
-def process_formatting(text, keep_comments=False):
+def process_formatting(text, keep_comments=False, url_footnotes=False):
     """Process bold, italic, and other formatting in text, then escape LaTeX"""
     # First, strip HTML comments
     text = strip_html_comments(text, keep_comments)
@@ -237,19 +237,25 @@ def process_formatting(text, keep_comments=False):
         formatted_link_text = re.sub(r'__([^_]+)__', r'\\textbf{\1}', formatted_link_text)
         formatted_link_text = re.sub(r'_([^_]+)_', r'\\textit{\1}', formatted_link_text)
         # Create the final LaTeX link
-        latex_link = f'\\href{{{url}}}{{{formatted_link_text}}}'
+        if url_footnotes:
+            # Link with automatic footnote (old behavior - useful for print documents)
+            latex_link = f'\\href{{{url}}}{{{formatted_link_text}}}\\footnote{{\\url{{{url}}}}}'
+        else:
+            # Just the link (current behavior)
+            latex_link = f'\\href{{{url}}}{{{formatted_link_text}}}'
         text = text.replace(placeholder_id, latex_link)
     
     # Restore protected footnote references after all formatting is done
     for placeholder_id, footnote_id in footnote_placeholders:
-        # Create LaTeX footnote reference using a simple approach
-        latex_footnote_ref = f'\\footnotemark[\\footnoteid{{{footnote_id}}}]'
+        # Create LaTeX footnote reference using standard LaTeX footnotes
+        # We'll use a placeholder that will be replaced with the actual footnote content later
+        latex_footnote_ref = f'\\footnote{{\\footnotecontent{{{footnote_id}}}}}'
         text = text.replace(placeholder_id, latex_footnote_ref)
     
     # Escape remaining text
     return escape_latex(text)
 
-def process_markdown_line(line, use_sections=False, keep_comments=False):
+def process_markdown_line(line, use_sections=False, keep_comments=False, url_footnotes=False):
     """Convert a single line of Markdown to LaTeX"""
     line = line.rstrip()
     
@@ -260,42 +266,42 @@ def process_markdown_line(line, use_sections=False, keep_comments=False):
     # Headers - process formatting before escaping
     if line.startswith('# '):
         title = line[2:].strip()
-        title = process_formatting(title, keep_comments)
+        title = process_formatting(title, keep_comments, url_footnotes)
         if use_sections:
             return f"\\section{{{title}}}\n"
         else:
             return f"\\chapter{{{title}}}\n"
     elif line.startswith('## '):
         title = line[3:].strip()
-        title = process_formatting(title, keep_comments)
+        title = process_formatting(title, keep_comments, url_footnotes)
         if use_sections:
             return f"\\subsection{{{title}}}\n"
         else:
             return f"\\section{{{title}}}\n"
     elif line.startswith('### '):
         title = line[4:].strip()
-        title = process_formatting(title, keep_comments)
+        title = process_formatting(title, keep_comments, url_footnotes)
         if use_sections:
             return f"\\subsubsection{{{title}}}\n"
         else:
             return f"\\subsection{{{title}}}\n"
     elif line.startswith('#### '):
         title = line[5:].strip()
-        title = process_formatting(title, keep_comments)
+        title = process_formatting(title, keep_comments, url_footnotes)
         if use_sections:
             return f"\\paragraph{{{title}}}\n"
         else:
             return f"\\subsubsection{{{title}}}\n"
     elif line.startswith('##### '):
         title = line[6:].strip()
-        title = process_formatting(title, keep_comments)
+        title = process_formatting(title, keep_comments, url_footnotes)
         if use_sections:
             return f"\\subparagraph{{{title}}}\n"
         else:
             return f"\\paragraph{{{title}}}\n"
     elif line.startswith('###### '):
         title = line[7:].strip()
-        title = process_formatting(title, keep_comments)
+        title = process_formatting(title, keep_comments, url_footnotes)
         return f"\\subparagraph{{{title}}}\n"
     
     # Blockquotes
@@ -306,7 +312,7 @@ def process_markdown_line(line, use_sections=False, keep_comments=False):
             return "\n"
         else:
             # Blockquote with content
-            content = process_formatting(line.strip()[2:], keep_comments)
+            content = process_formatting(line.strip()[2:], keep_comments, url_footnotes)
             return f"\\begin{{quote}}\n{content}\n\\end{{quote}}\n"
     
     # Todolist items
@@ -314,7 +320,7 @@ def process_markdown_line(line, use_sections=False, keep_comments=False):
         # Extract checkbox state and content
         match = re.match(r'^\s*- \[([ x])\]\s+(.*)', line)
         checked = match.group(1) == 'x'
-        content = process_formatting(match.group(2), keep_comments)
+        content = process_formatting(match.group(2), keep_comments, url_footnotes)
         if checked:
             return f"\\checkeditem {content}"
         else:
@@ -322,10 +328,10 @@ def process_markdown_line(line, use_sections=False, keep_comments=False):
     
     # Lists
     elif line.strip().startswith('- ') or line.strip().startswith('* '):
-        content = process_formatting(line.strip()[2:], keep_comments)
+        content = process_formatting(line.strip()[2:], keep_comments, url_footnotes)
         return f"\\item {content}"
     elif re.match(r'^\s*\d+\.\s+', line):
-        content = process_formatting(re.sub(r'^\s*\d+\.\s+', '', line), keep_comments)
+        content = process_formatting(re.sub(r'^\s*\d+\.\s+', '', line), keep_comments, url_footnotes)
         return f"\\item {content}"
     
     # Code blocks
@@ -339,9 +345,9 @@ def process_markdown_line(line, use_sections=False, keep_comments=False):
         return "\\end{lstlisting}\n"
     
     # Regular paragraph content - use process_formatting for consistency
-    return process_formatting(line, keep_comments) + "\n"
+    return process_formatting(line, keep_comments, url_footnotes) + "\n"
 
-def extract_footnote_definitions(lines):
+def extract_footnote_definitions(lines, url_footnotes=False):
     """Extract footnote definitions from markdown lines and return processed lines and footnotes"""
     processed_lines = []
     footnotes = {}
@@ -353,7 +359,7 @@ def extract_footnote_definitions(lines):
             footnote_id = footnote_match.group(1)
             footnote_content = footnote_match.group(2)
             # Process the footnote content for formatting
-            processed_content = process_formatting(footnote_content)
+            processed_content = process_formatting(footnote_content, url_footnotes=url_footnotes)
             footnotes[footnote_id] = processed_content
         else:
             processed_lines.append(line)
@@ -390,7 +396,7 @@ def extract_yaml_front_matter(lines):
     # Return remaining lines (after the closing ---)
     return yaml_content, lines[end_index + 1:]
 
-def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False):
+def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False, url_footnotes=False):
     """Convert a single Markdown file to LaTeX content"""
     with open(md_file_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
@@ -399,7 +405,7 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False)
     yaml_metadata, content_lines = extract_yaml_front_matter(lines)
     
     # Extract footnote definitions
-    content_lines, footnotes = extract_footnote_definitions(content_lines)
+    content_lines, footnotes = extract_footnote_definitions(content_lines, url_footnotes)
     
     latex_content = []
     in_list = False
@@ -468,7 +474,7 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False)
                 latex_content.append("\\end{todolist}\n\n")
                 in_todolist = False
             
-            latex_content.append(process_markdown_line(line, use_sections, keep_comments))
+            latex_content.append(process_markdown_line(line, use_sections, keep_comments, url_footnotes))
             continue
         
         # Handle blockquotes
@@ -487,7 +493,7 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False)
                 latex_content.append("\\end{todolist}\n\n")
                 in_todolist = False
             
-            latex_content.append(process_markdown_line(line, use_sections, keep_comments))
+            latex_content.append(process_markdown_line(line, use_sections, keep_comments, url_footnotes))
             continue
         
         # Handle todolist items
@@ -506,7 +512,7 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False)
                 latex_content.append("\\begin{todolist}\n")
                 in_todolist = True
             
-            latex_content.append(process_markdown_line(line, use_sections, keep_comments) + "\n")
+            latex_content.append(process_markdown_line(line, use_sections, keep_comments, url_footnotes) + "\n")
             continue
         
         # Handle lists
@@ -525,7 +531,7 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False)
                 latex_content.append("\\begin{itemize}\n")
                 in_list = True
             
-            latex_content.append(process_markdown_line(line, use_sections, keep_comments) + "\n")
+            latex_content.append(process_markdown_line(line, use_sections, keep_comments, url_footnotes) + "\n")
             continue
         
         elif re.match(r'^\s*\d+\.\s+', line):
@@ -543,7 +549,7 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False)
                 latex_content.append("\\begin{enumerate}\n")
                 in_ordered_list = True
             
-            latex_content.append(process_markdown_line(line, use_sections, keep_comments) + "\n")
+            latex_content.append(process_markdown_line(line, use_sections, keep_comments, url_footnotes) + "\n")
             continue
         
         # Close lists if we're not in a list item
@@ -558,7 +564,7 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False)
             in_todolist = False
         
         # Regular paragraph content
-        processed_line = process_markdown_line(line, use_sections, keep_comments).strip()
+        processed_line = process_markdown_line(line, use_sections, keep_comments, url_footnotes).strip()
         if processed_line:
             paragraph_buffer.append(processed_line)
     
@@ -573,16 +579,16 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False)
     if in_todolist:
         latex_content.append("\\end{todolist}\n\n")
     
-    # Add footnote definitions at the end
-    if footnotes:
-        latex_content.append("\\vspace{1em}\n")
-        for footnote_id, footnote_content in footnotes.items():
-            latex_content.append(f"\\footnotetext[\\footnoteid{{{footnote_id}}}]{{{footnote_content}}}\n")
-        latex_content.append("\n")
+    # Replace footnote placeholders with actual content
+    # This is done after all processing to ensure footnotes are properly formatted
+    full_content = ''.join(latex_content)
+    for footnote_id, footnote_content in footnotes.items():
+        placeholder = f'\\footnote{{\\footnotecontent{{{footnote_id}}}}}'
+        full_content = full_content.replace(placeholder, f'\\footnote{{{footnote_content}}}')
     
-    return ''.join(latex_content)
+    return full_content
 
-def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, kdp_mass_market=False, kdp_mass_market_wide=False, minimal=False, keep_comments=False):
+def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, kdp_mass_market=False, kdp_mass_market_wide=False, minimal=False, keep_comments=False, url_footnotes=False):
     """Create the complete LaTeX document using variable-based templates"""
     
     if kdp_6x9:
@@ -1293,7 +1299,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     
     for md_file in sorted(md_files):
         print(f"Processing {md_file}...")
-        file_content = convert_markdown_file(md_file, use_sections, keep_comments)
+        file_content = convert_markdown_file(md_file, use_sections, keep_comments, url_footnotes)
         full_content += file_content + "\n\n"
     
     full_content += ending
@@ -1451,6 +1457,11 @@ def main():
         action='store_true',
         help='Keep HTML comments in LaTeX output (convert to LaTeX comments)'
     )
+    parser.add_argument(
+        '--url-footnotes',
+        action='store_true',
+        help='Automatically add footnotes with URLs for all links (useful for print documents)'
+    )
     
     args = parser.parse_args()
     
@@ -1491,7 +1502,13 @@ def main():
     # Create the LaTeX document
     # Use sections for novel, royal, KDP, and minimal formats by default
     use_sections = args.sections or args.novel or args.royal or args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.minimal
-    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.kdp_mass_market, args.kdp_mass_market_wide, args.minimal, args.keep_comments)
+    
+    # Automatically enable URL footnotes for print formats (KDP/Kindle formats)
+    # These are print formats where URLs should be visible in footnotes
+    is_print_format = args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.novel or args.royal
+    url_footnotes = args.url_footnotes or is_print_format
+    
+    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.kdp_mass_market, args.kdp_mass_market_wide, args.minimal, args.keep_comments, url_footnotes)
     
     # Optionally compile to PDF
     pdf_created = False
