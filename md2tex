@@ -392,7 +392,7 @@ def process_markdown_line(line, use_sections=False, keep_comments=False, url_foo
         return "\\end{lstlisting}\n"
     
     # Regular paragraph content - use process_formatting for consistency
-    return process_formatting(line, keep_comments, url_footnotes) + "\n"
+    return process_formatting(line, keep_comments, url_footnotes)
 
 def extract_footnote_definitions(lines, url_footnotes=False):
     """Extract footnote definitions from markdown lines and return processed lines and footnotes"""
@@ -462,7 +462,8 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False,
     paragraph_buffer = []
     
     # First, process the entire content to handle multiline HTML comments
-    full_content = '\n'.join(content_lines)
+    # Strip newlines from content_lines before joining to avoid double newlines
+    full_content = '\n'.join(line.rstrip('\n') for line in content_lines)
     full_content = strip_html_comments(full_content, keep_comments)
     content_lines = full_content.split('\n')
     
