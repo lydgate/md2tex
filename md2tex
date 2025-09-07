@@ -1029,9 +1029,9 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 
 {TYPOGRAPHY_PACKAGES}
 
-% Paragraph formatting with spacing
+% Paragraph formatting with minimal spacing
 \\setlength{{\\parindent}}{{12pt}}
-\\setlength{{\\parskip}}{{6pt plus 2pt minus 1pt}}
+\\setlength{{\\parskip}}{{0pt plus 1pt}}
 
 % Simple page numbers only
 \\usepackage{{fancyhdr}}
@@ -1565,10 +1565,12 @@ def main():
     # Use sections for novel, royal, KDP, and minimal formats by default
     use_sections = args.sections or args.novel or args.royal or args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.minimal
     
-    # Automatically enable URL footnotes for print formats (KDP/Kindle formats)
+    # Automatically enable URL footnotes for print formats
     # These are print formats where URLs should be visible in footnotes
     is_print_format = args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.novel or args.royal
-    url_footnotes = args.url_footnotes or is_print_format
+    # Default A4 format is also a print format (when no specific format is specified)
+    is_default_print_format = not (args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.novel or args.royal or args.minimal)
+    url_footnotes = args.url_footnotes or is_print_format or is_default_print_format
     
     create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.kdp_mass_market, args.kdp_mass_market_wide, args.minimal, args.keep_comments, url_footnotes)
     
