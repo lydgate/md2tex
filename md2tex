@@ -111,6 +111,64 @@ SECTION_NUMBERING = r"""% Custom section numbering for section mode
 \renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
 \renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}"""
 
+def get_git_version_info(file_path=None):
+    """Get git version information for the current repository"""
+    try:
+        # Get the directory of the file or current directory
+        if file_path:
+            repo_dir = os.path.dirname(os.path.abspath(file_path))
+        else:
+            repo_dir = os.getcwd()
+        
+        # Check if we're in a git repository
+        git_dir = os.path.join(repo_dir, '.git')
+        if not os.path.exists(git_dir):
+            return None, None, None
+        
+        # Get the latest tag
+        try:
+            tag_result = subprocess.run(
+                ['git', 'describe', '--tags', '--abbrev=0'],
+                cwd=repo_dir,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            latest_tag = tag_result.stdout.strip()
+        except subprocess.CalledProcessError:
+            latest_tag = None
+        
+        # Get the current commit hash (short)
+        try:
+            commit_result = subprocess.run(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                cwd=repo_dir,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            commit_hash = commit_result.stdout.strip()
+        except subprocess.CalledProcessError:
+            commit_hash = None
+        
+        # Get the commit date
+        try:
+            date_result = subprocess.run(
+                ['git', 'log', '-1', '--format=%cd', '--date=short'],
+                cwd=repo_dir,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            commit_date = date_result.stdout.strip()
+        except subprocess.CalledProcessError:
+            commit_date = None
+        
+        return latest_tag, commit_hash, commit_date
+        
+    except Exception:
+        return None, None, None
+
 def is_markdown_file(file_path):
     """Check if a file is actually a markdown file by examining its content"""
     try:
@@ -636,8 +694,28 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False,
     
     return full_content
 
-def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, kdp_mass_market=False, kdp_mass_market_wide=False, minimal=False, keep_comments=False, url_footnotes=False):
+def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, kdp_mass_market=False, kdp_mass_market_wide=False, minimal=False, keep_comments=False, url_footnotes=False, include_git_info=True):
     """Create the complete LaTeX document using variable-based templates"""
+    
+    # Get git version information if requested
+    git_tag, git_hash, git_date = None, None, None
+    if include_git_info and md_files:
+        git_tag, git_hash, git_date = get_git_version_info(md_files[0])
+    
+    # Create version string for display
+    version_info = ""
+    if git_tag and git_hash:
+        version_info = f"{git_tag} ({git_hash})"
+    elif git_hash:
+        version_info = f"commit {git_hash}"
+    
+    # Add version info to subtitle if we have it
+    if version_info and subtitle:
+        subtitle_with_version = f"{subtitle} — {version_info}"
+    elif version_info:
+        subtitle_with_version = version_info
+    else:
+        subtitle_with_version = subtitle
     
     if kdp_6x9:
         # KDP 6x9 inch format (152.4 x 228.6mm) optimized for Amazon KDP
@@ -675,7 +753,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\fancyhf{{}}
 \\fancyhead[LE,RO]{{\\thepage}}
 \\fancyhead[LO]{{\\nouppercase{{\\textit{{{title}}}}}}}
-\\fancyhead[RE]{{\\nouppercase{{{subtitle}}}}}
+\\fancyhead[RE]{{\\nouppercase{{{subtitle_with_version}}}}}
 \\renewcommand{{\\headrulewidth}}{{0pt}}
 \\setlength{{\\headheight}}{{16pt}}
 \\setlength{{\\headsep}}{{8pt}}
@@ -710,7 +788,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 
 \\vspace{{1cm}}
 
-{{\\normalsize {subtitle}}}
+{{\\normalsize {subtitle_with_version}}}
 
 \\vspace{{2cm}}
 
@@ -768,7 +846,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\fancyhf{{}}
 \\fancyhead[LE,RO]{{\\thepage}}
 \\fancyhead[LO]{{\\nouppercase{{\\textit{{{title}}}}}}}
-\\fancyhead[RE]{{\\nouppercase{{{subtitle}}}}}
+\\fancyhead[RE]{{\\nouppercase{{{subtitle_with_version}}}}}
 \\renewcommand{{\\headrulewidth}}{{0pt}}
 \\setlength{{\\headheight}}{{16pt}}
 \\setlength{{\\headsep}}{{8pt}}
@@ -803,7 +881,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 
 \\vspace{{1cm}}
 
-{{\\normalsize {subtitle}}}
+{{\\normalsize {subtitle_with_version}}}
 
 \\vspace{{2cm}}
 
@@ -861,7 +939,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\fancyhf{{}}
 \\fancyhead[LE,RO]{{\\thepage}}
 \\fancyhead[LO]{{\\nouppercase{{\\textit{{{title}}}}}}}
-\\fancyhead[RE]{{\\nouppercase{{{subtitle}}}}}
+\\fancyhead[RE]{{\\nouppercase{{{subtitle_with_version}}}}}
 \\renewcommand{{\\headrulewidth}}{{0pt}}
 \\setlength{{\\headheight}}{{16pt}}
 \\setlength{{\\headsep}}{{8pt}}
@@ -896,7 +974,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 
 \\vspace{{0.8cm}}
 
-{{\\normalsize {subtitle}}}
+{{\\normalsize {subtitle_with_version}}}
 
 \\vspace{{1.5cm}}
 
@@ -954,7 +1032,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\fancyhf{{}}
 \\fancyhead[LE,RO]{{\\thepage}}
 \\fancyhead[LO]{{\\nouppercase{{\\textit{{{title}}}}}}}
-\\fancyhead[RE]{{\\nouppercase{{{subtitle}}}}}
+\\fancyhead[RE]{{\\nouppercase{{{subtitle_with_version}}}}}
 \\renewcommand{{\\headrulewidth}}{{0pt}}
 \\setlength{{\\headheight}}{{16pt}}
 \\setlength{{\\headsep}}{{8pt}}
@@ -989,7 +1067,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 
 \\vspace{{0.8cm}}
 
-{{\\normalsize {subtitle}}}
+{{\\normalsize {subtitle_with_version}}}
 
 \\vspace{{1.5cm}}
 
@@ -1099,7 +1177,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\fancyhf{{}}
 \\fancyhead[LE,RO]{{\\thepage}}
 \\fancyhead[LO]{{\\nouppercase{{\\textit{{{title}}}}}}}
-\\fancyhead[RE]{{\\nouppercase{{{subtitle}}}}}
+\\fancyhead[RE]{{\\nouppercase{{{subtitle_with_version}}}}}
 \\renewcommand{{\\headrulewidth}}{{0pt}}
 \\setlength{{\\headheight}}{{14pt}}
 
@@ -1133,7 +1211,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 
 \\vspace{{1cm}}
 
-{{\\normalsize {subtitle}}}
+{{\\normalsize {subtitle_with_version}}}
 
 \\vspace{{2cm}}
 
@@ -1184,7 +1262,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\fancyhf{{}}
 \\fancyhead[LE,RO]{{\\thepage}}
 \\fancyhead[LO]{{\\nouppercase{{\\textit{{{title}}}}}}}
-\\fancyhead[RE]{{\\nouppercase{{{subtitle}}}}}
+\\fancyhead[RE]{{\\nouppercase{{{subtitle_with_version}}}}}
 \\renewcommand{{\\headrulewidth}}{{0pt}}
 \\setlength{{\\headheight}}{{14pt}}
 
@@ -1218,7 +1296,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 
 \\vspace{{1cm}}
 
-{{\\normalsize {subtitle}}}
+{{\\normalsize {subtitle_with_version}}}
 
 \\vspace{{2cm}}
 
@@ -1273,7 +1351,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 \\fancyhf{{}}
 \\fancyhead[C]{{\\thepage}}
 \\fancyhead[L]{{\\nouppercase{{\\textit{{{title}}}}}}}
-\\fancyhead[R]{{\\nouppercase{{{subtitle}}}}}
+\\fancyhead[R]{{\\nouppercase{{{subtitle_with_version}}}}}
 \\renewcommand{{\\headrulewidth}}{{0.4pt}}
 \\setlength{{\\headheight}}{{14pt}}
 
@@ -1307,7 +1385,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 
 \\vspace{{1cm}}
 
-{{\\Large {subtitle}}}
+{{\\Large {subtitle_with_version}}}
 
 \\vspace{{2cm}}
 
@@ -1572,7 +1650,7 @@ def main():
     is_default_print_format = not (args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.novel or args.royal or args.minimal)
     url_footnotes = args.url_footnotes or is_print_format or is_default_print_format
     
-    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.kdp_mass_market, args.kdp_mass_market_wide, args.minimal, args.keep_comments, url_footnotes)
+    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.kdp_mass_market, args.kdp_mass_market_wide, args.minimal, args.keep_comments, url_footnotes, True)
     
     # Optionally compile to PDF
     pdf_created = False
