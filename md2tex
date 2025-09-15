@@ -1431,7 +1431,18 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
         file_title = first_file.stem  # filename without extension
         # Convert underscores and hyphens to spaces, capitalize
         file_title = file_title.replace('_', ' ').replace('-', ' ').title()
-        full_content += f"\\title{{{file_title}}}\n\\author{{{author}}}\n\\date{{{subtitle_with_version}}}\n\\maketitle\n\n"
+        
+        # Create date string with both actual date and git version
+        from datetime import datetime
+        current_date = datetime.now().strftime("%B %d, %Y")
+        if subtitle_with_version != subtitle:
+            # If we have git version info, include both date and version
+            date_with_version = f"{current_date} — {subtitle_with_version}"
+        else:
+            # If no git version, just use the subtitle
+            date_with_version = f"{current_date} — {subtitle_with_version}"
+        
+        full_content += f"\\title{{{file_title}}}\n\\author{{{author}}}\n\\date{{{date_with_version}}}\n\\maketitle\n\n"
     
     for md_file in sorted(md_files):
         print(f"Processing {md_file}...")
