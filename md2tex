@@ -120,9 +120,18 @@ def get_git_version_info(file_path=None):
         else:
             repo_dir = os.getcwd()
         
-        # Check if we're in a git repository
-        git_dir = os.path.join(repo_dir, '.git')
-        if not os.path.exists(git_dir):
+        # Check if git command exists
+        try:
+            subprocess.run(['git', '--version'], capture_output=True, check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("Warning: git command not found, skipping version information")
+            return None, None, None
+        
+        # Check if we're in a git repository by trying git commands
+        try:
+            # Try to get git root directory - this will fail if not in a git repo
+            subprocess.run(['git', 'rev-parse', '--git-dir'], cwd=repo_dir, capture_output=True, check=True)
+        except subprocess.CalledProcessError:
             return None, None, None
         
         # Get the latest tag
@@ -166,7 +175,8 @@ def get_git_version_info(file_path=None):
         
         return latest_tag, commit_hash, commit_date
         
-    except Exception:
+    except Exception as e:
+        print(f"Warning: Error getting git version info: {e}")
         return None, None, None
 
 def is_markdown_file(file_path):
