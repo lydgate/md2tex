@@ -23,9 +23,26 @@ FONT_SETUP = r"""% Font setup - Minion Pro
 \setsansfont{Myriad Pro}
 \setmonofont{Consolas Ligaturized}"""
 
-TYPOGRAPHY_PACKAGES = r"""% Enhanced typography
-\usepackage{microtype}  % Better letter spacing and word breaking
-\usepackage{setspace}   % Line spacing control"""
+def get_typography_packages(debug_overfull=False):
+    """Get typography packages with conditional overfull box handling"""
+    overfull_rule = "0pt" if not debug_overfull else "1pt"
+    return f"""% Enhanced typography
+\\usepackage{{microtype}}  % Better letter spacing and word breaking
+\\usepackage{{setspace}}   % Line spacing control
+\\usepackage{{hyphenat}}   % Better hyphenation control
+
+% Better line breaking and overfull hbox handling
+\\setlength{{\\emergencystretch}}{{3em}}  % Allow more flexibility in line breaking
+\\setlength{{\\tolerance}}{{9999}}        % Be more tolerant of spacing to avoid overfull lines
+\\setlength{{\\overfullrule}}{{{overfull_rule}}}      % {'Show' if debug_overfull else 'Hide'} overfull boxes
+\\setlength{{\\hfuzz}}{{0.5pt}}           % Allow small overfull lines
+\\raggedbottom                        % Don't stretch content to fill pages
+
+% Hyphenation settings for better line breaking
+\\hyphenpenalty=50                    % Penalty for hyphenation
+\\exhyphenpenalty=50                  % Penalty for hyphenation after explicit hyphen
+\\doublehyphendemerits=10000          % Penalty for consecutive hyphenated lines
+\\finalhyphendemerits=5000            % Penalty for hyphenating the second-to-last line"""
 
 CODE_HIGHLIGHTING_BASE = r"""% Code highlighting
 \usepackage{listings}
@@ -704,7 +721,7 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False,
     
     return full_content
 
-def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, kdp_mass_market=False, kdp_mass_market_wide=False, minimal=False, keep_comments=False, url_footnotes=False, include_git_info=True):
+def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, kdp_mass_market=False, kdp_mass_market_wide=False, minimal=False, keep_comments=False, url_footnotes=False, include_git_info=True, debug_overfull=False):
     """Create the complete LaTeX document using variable-based templates"""
     
     # Get git version information if requested
@@ -743,7 +760,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     bottom=20mm      % 0.79in bottom margin (KDP minimum + safety)
 ]{{geometry}}
 
-{TYPOGRAPHY_PACKAGES}
+{get_typography_packages(debug_overfull)}
 
 % Paragraph formatting optimized for readability and margin compliance
 \\setlength{{\\parindent}}{{12pt}}
@@ -836,7 +853,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     bottom=18mm      % 0.71in bottom margin (KDP minimum + safety)
 ]{{geometry}}
 
-{TYPOGRAPHY_PACKAGES}
+{get_typography_packages(debug_overfull)}
 
 % Paragraph formatting optimized for readability and margin compliance
 \\setlength{{\\parindent}}{{12pt}}
@@ -929,7 +946,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     bottom=16mm      % 0.63in bottom margin (KDP minimum + safety)
 ]{{geometry}}
 
-{TYPOGRAPHY_PACKAGES}
+{get_typography_packages(debug_overfull)}
 
 % Paragraph formatting optimized for compact reading and margin compliance
 \\setlength{{\\parindent}}{{10pt}}
@@ -1022,7 +1039,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     bottom=17mm      % 0.67in bottom margin (KDP minimum + safety)
 ]{{geometry}}
 
-{TYPOGRAPHY_PACKAGES}
+{get_typography_packages(debug_overfull)}
 
 % Paragraph formatting optimized for readability and margin compliance
 \\setlength{{\\parindent}}{{11pt}}
@@ -1115,7 +1132,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     bottom=19.1mm    % 0.75in bottom margin
 ]{{geometry}}
 
-{TYPOGRAPHY_PACKAGES}
+{get_typography_packages(debug_overfull)}
 
 % Paragraph formatting with minimal spacing
 \\setlength{{\\parindent}}{{12pt}}
@@ -1175,7 +1192,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     bottom=20mm      % Bottom margin
 ]{{geometry}}
 
-{TYPOGRAPHY_PACKAGES}
+{get_typography_packages(debug_overfull)}
 
 % Paragraph formatting with spacing
 \\setlength{{\\parindent}}{{12pt}}
@@ -1260,7 +1277,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     bottom=22mm      % Bottom margin
 ]{{geometry}}
 
-{TYPOGRAPHY_PACKAGES}
+{get_typography_packages(debug_overfull)}
 
 % Paragraph formatting with spacing
 \\setlength{{\\parindent}}{{12pt}}
@@ -1349,7 +1366,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
 % Two-column layout
 \\usepackage{{multicol}}
 
-{TYPOGRAPHY_PACKAGES}
+{get_typography_packages(debug_overfull)}
 
 % Paragraph formatting with spacing
 \\setlength{{\\parindent}}{{0pt}}
@@ -1609,6 +1626,11 @@ def main():
         action='store_true',
         help='Automatically add footnotes with URLs for all links (useful for print documents)'
     )
+    parser.add_argument(
+        '--debug-overfull',
+        action='store_true',
+        help='Show overfull hbox warnings during compilation (useful for debugging line breaking issues)'
+    )
     
     args = parser.parse_args()
     
@@ -1671,7 +1693,7 @@ def main():
     is_default_print_format = not (args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.novel or args.royal or args.minimal)
     url_footnotes = args.url_footnotes or is_print_format or is_default_print_format
     
-    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.kdp_mass_market, args.kdp_mass_market_wide, args.minimal, args.keep_comments, url_footnotes, True)
+    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.kdp_mass_market, args.kdp_mass_market_wide, args.minimal, args.keep_comments, url_footnotes, True, args.debug_overfull)
     
     # Optionally compile to PDF
     pdf_created = False
