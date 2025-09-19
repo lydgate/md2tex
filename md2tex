@@ -482,7 +482,8 @@ def process_markdown_line(line, use_sections=False, keep_comments=False, url_foo
 def extract_footnote_definitions(lines, url_footnotes=False):
     """Extract footnote definitions from markdown lines and return processed lines and footnotes"""
     processed_lines = []
-    footnotes = {}
+    footnotes = {}  # Maps footnote_id -> content
+    footnote_definitions = []  # List of (id, content) tuples in order of appearance
     
     for line in lines:
         # Check if this line is a footnote definition: [^id]: content
@@ -492,11 +493,13 @@ def extract_footnote_definitions(lines, url_footnotes=False):
             footnote_content = footnote_match.group(2)
             # Process the footnote content for formatting
             processed_content = process_formatting(footnote_content, url_footnotes=url_footnotes)
+            # Store in both the dictionary and the ordered list
             footnotes[footnote_id] = processed_content
+            footnote_definitions.append((footnote_id, processed_content))
         else:
             processed_lines.append(line)
     
-    return processed_lines, footnotes
+    return processed_lines, footnotes, footnote_definitions
 
 def extract_yaml_front_matter(lines):
     """Extract YAML front matter from the beginning of a markdown file"""
@@ -537,7 +540,7 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False,
     yaml_metadata, content_lines = extract_yaml_front_matter(lines)
     
     # Extract footnote definitions
-    content_lines, footnotes = extract_footnote_definitions(content_lines, url_footnotes)
+    content_lines, footnotes, footnote_definitions = extract_footnote_definitions(content_lines, url_footnotes)
     
     latex_content = []
     in_list = False
@@ -715,13 +718,34 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False,
     # Replace footnote placeholders with actual content
     # This is done after all processing to ensure footnotes are properly formatted
     full_content = ''.join(latex_content)
-    for footnote_id, footnote_content in footnotes.items():
-        placeholder = f'\\footnote{{\\footnotecontent{{{footnote_id}}}}}'
-        full_content = full_content.replace(placeholder, f'\\footnote{{{footnote_content}}}')
+    
+    # Implement auto-numbering for footnotes
+    # The key insight: when multiple definitions have the same ID, use them sequentially
+    # Create a list of footnote contents in order of definition
+    footnote_contents = []
+    for footnote_id, footnote_content in footnote_definitions:
+        footnote_contents.append(footnote_content)
+    
+    # Replace footnote placeholders with actual content using sequential numbering
+    # Find all footnote placeholders and replace them with sequential footnotes
+    footnote_counter = 0
+    
+    def replace_footnote_placeholder(match):
+        nonlocal footnote_counter
+        if footnote_counter < len(footnote_contents):
+            content = footnote_contents[footnote_counter]
+            footnote_counter += 1
+            return f'\\footnote{{{content}}}'
+        else:
+            # Fallback: use the original placeholder if we run out of definitions
+            return match.group(0)
+    
+    # Replace all footnote placeholders with sequential footnotes
+    full_content = re.sub(r'\\footnote\{\\footnotecontent\{[^}]+\}\}', replace_footnote_placeholder, full_content)
     
     return full_content
 
-def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, kdp_mass_market=False, kdp_mass_market_wide=False, minimal=False, keep_comments=False, url_footnotes=False, include_git_info=True, debug_overfull=False):
+def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, kdp_mass_market=False, kdp_mass_market_wide=False, minimal=False, minimal_b5=False, minimal_a4=False, keep_comments=False, url_footnotes=False, include_git_info=True, debug_overfull=False):
     """Create the complete LaTeX document using variable-based templates"""
     
     # Get git version information if requested
@@ -1116,20 +1140,49 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
         ending = r'''
 \end{document}
 '''
-    elif minimal:
-        # Minimal format - clean, simple, no title page or headers (KDP 6x9 inch dimensions)
-        preamble = f'''\\documentclass[12pt,oneside]{{article}}
+    elif minimal or minimal_b5 or minimal_a4:
+        # Minimal format - clean, simple, no title page or headers
+        # Determine paper size based on options
+        if minimal_b5:
+            # B5 format (176 x 250mm)
+            paper_width = "176mm"
+            paper_height = "250mm"
+            left_margin = "15mm"
+            right_margin = "15mm"
+            top_margin = "20mm"
+            bottom_margin = "20mm"
+            font_size = "11pt"
+        elif minimal_a4:
+            # A4 format (210 x 297mm)
+            paper_width = "210mm"
+            paper_height = "297mm"
+            left_margin = "20mm"
+            right_margin = "20mm"
+            top_margin = "25mm"
+            bottom_margin = "25mm"
+            font_size = "11pt"
+        else:
+            # Default KDP 6x9 inch format (152.4 x 228.6mm)
+            paper_width = "152.4mm"
+            paper_height = "228.6mm"
+            left_margin = "15mm"
+            right_margin = "15mm"
+            top_margin = "19.1mm"
+            bottom_margin = "19.1mm"
+            font_size = "12pt"
+        
+        preamble = f'''\\documentclass[{font_size},oneside]{{article}}
 
 {FONT_SETUP}
 
-% Page layout for minimal format - KDP 6x9 inch format (152.4 x 228.6mm)
+% Page layout for minimal format
 \\usepackage[
-    paperwidth=152.4mm,
-    paperheight=228.6mm,
-    left=15mm,       % Left margin
-    right=15mm,      % Right margin
-    top=19.1mm,      % 0.75in top margin
-    bottom=19.1mm    % 0.75in bottom margin
+    paperwidth={paper_width},
+    paperheight={paper_height},
+    left={left_margin},       % Left margin
+    right={right_margin},     % Right margin
+    top={top_margin},         % Top margin
+    bottom={bottom_margin}    % Bottom margin
 ]{{geometry}}
 
 {get_typography_packages(debug_overfull)}
@@ -1607,6 +1660,16 @@ def main():
         help='Create a minimal PDF without title page, TOC, or headers - just content with page numbers'
     )
     parser.add_argument(
+        '--b5',
+        action='store_true',
+        help='Use B5 size (176 x 250mm / 6.9 x 9.8in) with minimal format - good middle ground between default minimal and A4'
+    )
+    parser.add_argument(
+        '--a4',
+        action='store_true',
+        help='Use A4 size (210 x 297mm / 8.3 x 11.7in) with minimal format - excellent for screen reading'
+    )
+    parser.add_argument(
         '-c', '--cleanup',
         action='store_true',
         help='Remove intermediate LaTeX files (.aux, .log, .out, .tex, .toc) after compilation'
@@ -1684,16 +1747,16 @@ def main():
     
     # Create the LaTeX document
     # Use sections for novel, royal, KDP, and minimal formats by default
-    use_sections = args.sections or args.novel or args.royal or args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.minimal
+    use_sections = args.sections or args.novel or args.royal or args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.minimal or args.b5 or args.a4
     
     # Automatically enable URL footnotes for print formats
     # These are print formats where URLs should be visible in footnotes
     is_print_format = args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.novel or args.royal
     # Default A4 format is also a print format (when no specific format is specified)
-    is_default_print_format = not (args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.novel or args.royal or args.minimal)
+    is_default_print_format = not (args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.novel or args.royal or args.minimal or args.b5 or args.a4)
     url_footnotes = args.url_footnotes or is_print_format or is_default_print_format
     
-    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.kdp_mass_market, args.kdp_mass_market_wide, args.minimal, args.keep_comments, url_footnotes, True, args.debug_overfull)
+    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.kdp_mass_market, args.kdp_mass_market_wide, args.minimal, args.b5, args.a4, args.keep_comments, url_footnotes, True, args.debug_overfull)
     
     # Optionally compile to PDF
     pdf_created = False
