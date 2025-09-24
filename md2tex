@@ -325,11 +325,11 @@ def process_formatting(text, keep_comments=False, url_footnotes=False):
     text = re.sub(r'`([^`]+)`', r'\\texttt{\\detokenize{\1}}', text)
     
     # Bold and italic (now applied to remaining text, links already processed)
-    text = re.sub(r'\*\*\*([^*]+)\*\*\*', r'\\textbf{\\textit{\1}}', text)
-    text = re.sub(r'\*\*([^*]+)\*\*', r'\\textbf{\1}', text)
+    text = re.sub(r'\*\*\*([^*]+)\*\*\*', r'\\textbf{\\fontseries{sb}\\selectfont{\\textit{\1}}}', text)
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\\textbf{\\fontseries{sb}\\selectfont{\1}}', text)
     text = re.sub(r'\*([^*]+)\*', r'\\textit{\1}', text)
-    text = re.sub(r'___([^_]+)___', r'\\textbf{\\textit{\1}}', text)
-    text = re.sub(r'__([^_]+)__', r'\\textbf{\1}', text)
+    text = re.sub(r'___([^_]+)___', r'\\textbf{\\fontseries{sb}\\selectfont{\\textit{\1}}}', text)
+    text = re.sub(r'__([^_]+)__', r'\\textbf{\\fontseries{sb}\\selectfont{\1}}', text)
     text = re.sub(r'_([^_]+)_', r'\\textit{\1}', text)
     
     # Handle quotes - convert to LaTeX quote conventions
@@ -362,11 +362,11 @@ def process_formatting(text, keep_comments=False, url_footnotes=False):
     for placeholder_id, link_text, url in url_placeholders:
         # Process the link text for formatting (recursively, but without URLs)
         formatted_link_text = link_text
-        formatted_link_text = re.sub(r'\*\*\*([^*]+)\*\*\*', r'\\textbf{\\textit{\1}}', formatted_link_text)
-        formatted_link_text = re.sub(r'\*\*([^*]+)\*\*', r'\\textbf{\1}', formatted_link_text)
+        formatted_link_text = re.sub(r'\*\*\*([^*]+)\*\*\*', r'\\textbf{\\fontseries{sb}\\selectfont{\\textit{\1}}}', formatted_link_text)
+        formatted_link_text = re.sub(r'\*\*([^*]+)\*\*', r'\\textbf{\\fontseries{sb}\\selectfont{\1}}', formatted_link_text)
         formatted_link_text = re.sub(r'\*([^*]+)\*', r'\\textit{\1}', formatted_link_text)
-        formatted_link_text = re.sub(r'___([^_]+)___', r'\\textbf{\\textit{\1}}', formatted_link_text)
-        formatted_link_text = re.sub(r'__([^_]+)__', r'\\textbf{\1}', formatted_link_text)
+        formatted_link_text = re.sub(r'___([^_]+)___', r'\\textbf{\\fontseries{sb}\\selectfont{\\textit{\1}}}', formatted_link_text)
+        formatted_link_text = re.sub(r'__([^_]+)__', r'\\textbf{\\fontseries{sb}\\selectfont{\1}}', formatted_link_text)
         formatted_link_text = re.sub(r'_([^_]+)_', r'\\textit{\1}', formatted_link_text)
         # Create the final LaTeX link
         if url_footnotes:
