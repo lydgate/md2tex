@@ -531,10 +531,117 @@ def extract_yaml_front_matter(lines):
     # Return remaining lines (after the closing ---)
     return yaml_content, lines[end_index + 1:]
 
-def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False, url_footnotes=False):
+def validate_footnotes(md_file_path, lines, verbose=False):
+    """Validate that all footnote references have matching definitions"""
+    # Find all footnote references in the file
+    footnote_refs = []
+    for line_num, line in enumerate(lines, 1):
+        # Find all [^id] patterns that are NOT definitions (i.e., not followed by a colon)
+        for match in re.finditer(r'\[\^([^\]]+)\](?!:)', line):
+            footnote_id = match.group(1)
+            footnote_refs.append((line_num, footnote_id, line.strip()))
+    
+    # Find all footnote definitions
+    footnote_defs = []
+    for line_num, line in enumerate(lines, 1):
+        footnote_match = re.match(r'^\[\^([^\]]+)\]:\s*(.*)$', line.strip())
+        if footnote_match:
+            footnote_id = footnote_match.group(1)
+            footnote_defs.append((line_num, footnote_id))
+    
+    # Check for mismatches
+    errors = []
+    warnings = []
+    info = []
+    
+    # Always check for missing definitions (regardless of total count)
+    missing_refs = []
+    for line_num, footnote_id, line_text in footnote_refs:
+        # Check if there's a definition on the next line
+        has_definition = False
+        if line_num < len(lines):
+            next_line = lines[line_num].strip()  # line_num is 1-based, so lines[line_num] is the next line
+            if re.match(r'^\[\^([^\]]+)\]:\s*', next_line):
+                has_definition = True
+        
+        if not has_definition:
+            missing_refs.append((line_num, footnote_id, line_text))
+    
+    # Always check for unused definitions (regardless of total count)
+    unused_defs = []
+    for line_num, footnote_id in footnote_defs:
+        # Check if there's a reference on the previous line
+        has_reference = False
+        if line_num > 1:
+            prev_line = lines[line_num - 2].strip()  # line_num is 1-based, so lines[line_num-2] is the previous line
+            if re.search(r'\[\^([^\]]+)\](?!:)', prev_line):
+                has_reference = True
+        
+        if not has_reference:
+            # Get the definition content
+            def_line = lines[line_num - 1].strip()
+            unused_defs.append((line_num, footnote_id, def_line))
+    
+    # Report issues
+    if missing_refs:
+        errors.append(f"Missing {len(missing_refs)} footnote definition(s):\n")
+        for line_num, footnote_id, line_text in missing_refs:
+            errors.append(f"  Line {line_num}: [^{footnote_id}]")
+            errors.append(f"    → {line_text[:70]}...")
+            errors.append(f"    → Add after this line: [^{footnote_id}]: Your footnote content here\n")
+    
+    if unused_defs:
+        warnings.append(f"{len(unused_defs)} unused footnote definition(s):\n")
+        for line_num, footnote_id, def_line in unused_defs:
+            warnings.append(f"  Line {line_num}: [^{footnote_id}]:")
+            warnings.append(f"    → {def_line[:70]}...")
+            if line_num > 1:
+                warnings.append(f"    → Likely missing reference on line {line_num - 1}\n")
+            else:
+                warnings.append(f"    → No reference found for this definition\n")
+    
+    # Check for duplicate footnote IDs (only show in verbose mode)
+    if verbose:
+        ref_ids = [ref[1] for ref in footnote_refs]
+        
+        if len(ref_ids) != len(set(ref_ids)):
+            # Count duplicates
+            from collections import Counter
+            ref_counts = Counter(ref_ids)
+            duplicates = {id_: count for id_, count in ref_counts.items() if count > 1}
+            info.append(f"Reusing footnote IDs: {', '.join(f'[^{id_}] used {count}x' for id_, count in duplicates.items())}")
+            info.append(f"  (Each [^ID] reference should have a matching [^ID]: definition)")
+    
+    return errors, warnings, info
+
+def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False, url_footnotes=False, skip_validation=False, verbose=False):
     """Convert a single Markdown file to LaTeX content"""
     with open(md_file_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
+    
+    # Validate footnotes before processing
+    if not skip_validation:
+        errors, warnings, info = validate_footnotes(md_file_path, lines, verbose)
+        
+        # Show all messages first
+        if errors:
+            print(f"\n❌ ERROR in {md_file_path}:")
+            for error in errors:
+                print(f"{error}")
+        if warnings:
+            print(f"\n⚠️  WARNING in {md_file_path}:")
+            for warning in warnings:
+                print(f"  {warning}")
+            print()
+        if info:
+            print(f"\nℹ️  INFO for {md_file_path}:")
+            for info_msg in info:
+                print(f"  {info_msg}")
+            print()
+        
+        # Then raise error if there were any
+        if errors:
+            raise ValueError(f"Footnote validation failed for {md_file_path}")
     
     # Extract YAML front matter
     yaml_metadata, content_lines = extract_yaml_front_matter(lines)
@@ -745,7 +852,7 @@ def convert_markdown_file(md_file_path, use_sections=False, keep_comments=False,
     
     return full_content
 
-def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, kdp_mass_market=False, kdp_mass_market_wide=False, minimal=False, minimal_b5=False, minimal_a4=False, keep_comments=False, url_footnotes=False, include_git_info=True, debug_overfull=False):
+def create_latex_document(md_files, output_file, use_sections=False, title="Your Book Title", author="Author Name", subtitle="Subtitle or Description", novel=False, royal=False, kdp_6x9=False, kdp_trade=False, kdp_mass_market=False, kdp_mass_market_wide=False, minimal=False, minimal_b5=False, minimal_a4=False, keep_comments=False, url_footnotes=False, include_git_info=True, debug_overfull=False, skip_validation=False, verbose=False):
     """Create the complete LaTeX document using variable-based templates"""
     
     # Get git version information if requested
@@ -1516,7 +1623,7 @@ def create_latex_document(md_files, output_file, use_sections=False, title="Your
     
     for md_file in sorted(md_files):
         print(f"Processing {md_file}...")
-        file_content = convert_markdown_file(md_file, use_sections, keep_comments, url_footnotes)
+        file_content = convert_markdown_file(md_file, use_sections, keep_comments, url_footnotes, skip_validation, verbose)
         full_content += file_content + "\n\n"
     
     full_content += ending
@@ -1694,6 +1801,11 @@ def main():
         action='store_true',
         help='Show overfull hbox warnings during compilation (useful for debugging line breaking issues)'
     )
+    parser.add_argument(
+        '--skip-validation',
+        action='store_true',
+        help='Skip footnote validation checks (not recommended)'
+    )
     
     args = parser.parse_args()
     
@@ -1756,7 +1868,7 @@ def main():
     is_default_print_format = not (args.kdp_6x9 or args.kdp_trade or args.kdp_mass_market or args.kdp_mass_market_wide or args.novel or args.royal or args.minimal or args.b5 or args.a4)
     url_footnotes = args.url_footnotes or is_print_format or is_default_print_format
     
-    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.kdp_mass_market, args.kdp_mass_market_wide, args.minimal, args.b5, args.a4, args.keep_comments, url_footnotes, True, args.debug_overfull)
+    create_latex_document(md_files, args.output, use_sections, title, author, subtitle, args.novel, args.royal, args.kdp_6x9, args.kdp_trade, args.kdp_mass_market, args.kdp_mass_market_wide, args.minimal, args.b5, args.a4, args.keep_comments, url_footnotes, True, args.debug_overfull, args.skip_validation, args.verbose)
     
     # Optionally compile to PDF
     pdf_created = False
