@@ -21,7 +21,7 @@ FONT_SETUP = r"""% Font setup - Minion Pro
 \usepackage{fontspec}
 \setmainfont{Minion Pro}
 \setsansfont{Myriad Pro}
-\setmonofont{Consolas Ligaturized}"""
+\setmonofont[Scale=0.82]{Source Code Pro}"""
 
 def get_typography_packages(debug_overfull=False):
     """Get typography packages with conditional overfull box handling"""
