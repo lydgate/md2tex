@@ -358,6 +358,16 @@ def process_formatting(text, keep_comments=False, url_footnotes=False):
     # Convert page ranges and similar constructs (pages 10-15, chapters 1-3)
     text = re.sub(r'(\b(?:pages?|chapters?|sections?|parts?|volumes?|numbers?|lines?|verses?|items?)\s+\d+)\s*-\s*(\d+)', r'\1--\2', text, flags=re.IGNORECASE)
     
+    # Detect and link bare URLs (http/https) so they are clickable in the PDF (before restoring markdown links)
+    bare_url_placeholders = []
+    def protect_bare_url(match):
+        nonlocal bare_url_placeholders
+        url = match.group(0).rstrip('.,;:!?)')
+        placeholder_id = f"BAREURLPLACEHOLDER{len(bare_url_placeholders)}"
+        bare_url_placeholders.append((placeholder_id, url))
+        return placeholder_id + match.group(0)[len(url):]  # preserve trailing punctuation
+    text = re.sub(r'https?://[^\s<>"\']+', protect_bare_url, text)
+    
     # Restore protected URLs after all formatting is done
     for placeholder_id, link_text, url in url_placeholders:
         # Process the link text for formatting (recursively, but without URLs)
@@ -385,7 +395,16 @@ def process_formatting(text, keep_comments=False, url_footnotes=False):
         text = text.replace(placeholder_id, latex_footnote_ref)
     
     # Escape remaining text
-    return escape_latex(text)
+    text = escape_latex(text)
+    
+    # Restore bare URLs as clickable \url{...}
+    for placeholder_id, url in bare_url_placeholders:
+        # Escape LaTeX-special chars in URL for use inside \url{}
+        url_safe = url.replace('\\', '\\textbackslash{}').replace('{', '\\{').replace('}', '\\}')
+        latex_url = f'\\url{{{url_safe}}}'
+        text = text.replace(placeholder_id, latex_url)
+    
+    return text
 
 def process_markdown_line(line, use_sections=False, keep_comments=False, url_footnotes=False):
     """Convert a single line of Markdown to LaTeX"""
